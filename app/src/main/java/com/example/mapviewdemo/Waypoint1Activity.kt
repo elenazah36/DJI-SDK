@@ -6,14 +6,12 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.mapbox.geojson.*
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
 import com.mapbox.mapboxsdk.annotations.Marker
 import com.mapbox.mapboxsdk.annotations.MarkerOptions
 import com.mapbox.mapboxsdk.camera.CameraPosition
-import com.mapbox.mapboxsdk.camera.CameraUpdate
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.maps.MapboxMap
@@ -21,16 +19,13 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
 import com.mapbox.mapboxsdk.style.layers.*
-import com.mapbox.mapboxsdk.style.layers.Property.NONE
 import com.mapbox.mapboxsdk.style.layers.Property.VISIBLE
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import com.mapbox.mapboxsdk.style.sources.VectorSource
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
 import dji.sdk.mission.waypoint.WaypointMissionOperator
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener
-import org.json.JSONObject
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -80,8 +75,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private var finishedAction = WaypointMissionFinishedAction.NO_ACTION
     private var headingMode = WaypointMissionHeadingMode.AUTO
 
-    private var stringBufferGPS = StringBuffer()
-    private lateinit var mutableGPSList : MutableList<LatLng>
+    //private var stringBufferGPS = StringBuffer()
+    //private lateinit var mutableGPSList : MutableList<LatLng>
     private lateinit var mutableGeoJson : MutableList<Point>
     private lateinit var routeCoordinates: MutableList<Point>
 
@@ -99,6 +94,12 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         addListener() // will add a listener to the waypoint mission operator
     }
 
+    override fun onMapReady(mapboxMap: MapboxMap) {
+        this.mapboxMap = mapboxMap // initialize the map
+        mapboxMap.addOnMapClickListener(this)
+        mapboxMap.setStyle(Style.MAPBOX_STREETS) { // set the view of the map
+        }
+    }
 
     private fun initRouteCoordinates() {
         // Create a list to store our line coordinates.
@@ -115,7 +116,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun showTrack() {
         initRouteCoordinates()
-        mapboxMap?.setStyle(Style.LIGHT) { style ->
+        mapboxMap?.getStyle { style ->
             style.addSource(GeoJsonSource(
                     "line-source",
                     FeatureCollection.fromFeature(
@@ -143,14 +144,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                val waterLayer = it.getLayer("water")
                waterLayer?.setProperties(PropertyFactory.fillColor(Color.parseColor("#004f6b")))
             }
-    }
-
-
-    override fun onMapReady(mapboxMap: MapboxMap) {
-        this.mapboxMap = mapboxMap // initialize the map
-        mapboxMap.addOnMapClickListener(this)
-        mapboxMap.setStyle(Style.MAPBOX_STREETS) { // set the view of the map
-        }
     }
 
 
@@ -281,7 +274,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 setResultToToast(mutableGPSList.size.toString())
             }
         }.start()*/
-
         Thread {
             while (!stopButtonPressed) {
                 runOnUiThread {
@@ -356,19 +348,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-        /*mapboxMap.setStyle(Style.MAPBOX_STREETS) { style ->
-            style.addSource(GeoJsonSource("source-id", Polygon.fromLngLats(POINTS)))
-            style.addLayer(
-                LineLayer("linelayer", "line-source").withProperties(
-                    PropertyFactory.lineCap(Property.LINE_CAP_SQUARE),
-                    PropertyFactory.lineJoin(Property.LINE_JOIN_MITER),
-                    PropertyFactory.lineOpacity(0.7f),
-                    PropertyFactory.lineWidth(7f),
-                    PropertyFactory.lineColor(Color.parseColor("#3bb2d0"))
-                )
-            )
-
-        }*/
     private fun saveLogFile(stringBufferParam : StringBuffer) {
             setResultToToast("String is" + stringBufferParam.length.toString())
             val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
@@ -401,21 +380,34 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //coordinateList.add("recording started")
                 //start.isPressed = true
                 if(stopButtonPressed) stopButtonPressed = false
-                recordLocation()
+                try {
+                    recordLocation()
+                }
+                catch (e: IOException)
+                {
+                  setResultToToast(e.toString())
+                }
             }
             R.id.stop -> {
                 if (!stopButtonPressed) stopButtonPressed = true
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                recordtoGEOJson(mutableGeoJson)
+                try {
+                    recordtoGEOJson(mutableGeoJson)
+                }
+                catch(e : IOException)
+                {
+                    setResultToToast(e.toString())
+                }
                 //mutableGeoJson = mutableListOf()
                 //setResultToToast(stringBufferGPS.toString())
             }
             R.id.showTrack ->
             {
-                showTrack()
+
                 try {
+                    showTrack()
                     var newPosition = CameraPosition.Builder()
                         .target(LatLng(-118.39372033447427, 33.39728514560042))
                         .zoom(10.0)
