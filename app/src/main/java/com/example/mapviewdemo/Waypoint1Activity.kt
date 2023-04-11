@@ -11,7 +11,6 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
 import com.mapbox.mapboxsdk.annotations.Marker
 import com.mapbox.mapboxsdk.annotations.MarkerOptions
-import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.maps.MapboxMap
@@ -77,8 +76,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     //private var stringBufferGPS = StringBuffer()
     //private lateinit var mutableGPSList : MutableList<LatLng>
-    private lateinit var mutableGeoJson : MutableList<Point>
-    private lateinit var routeCoordinates: MutableList<Point>
+    private var mutableGeoJson : MutableList<Point> = mutableListOf()
+    private var routeCoordinates : MutableList<Point> = mutableListOf()
+    private var recordedCoordinates: MutableList<LatLng> = mutableListOf()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,27 +101,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun initRouteCoordinates() {
-        // Create a list to store our line coordinates.
-        routeCoordinates = mutableListOf()
-        routeCoordinates.add(Point.fromLngLat(-118.39439114221236, 33.397676454651766))
-        routeCoordinates.add(Point.fromLngLat(-118.39421054012902, 33.39769799454838))
-        routeCoordinates.add(Point.fromLngLat(-118.39408583869053, 33.39761901490136))
-        routeCoordinates.add(Point.fromLngLat(-118.39388373635917, 33.397328225582285))
-        routeCoordinates.add(Point.fromLngLat(-118.39372033447427, 33.39728514560042))
-        routeCoordinates.add(Point.fromLngLat(-118.3930882271826, 33.39756875508861))
-        routeCoordinates.add(Point.fromLngLat(-118.3928216241072, 33.39759029501192))
-        routeCoordinates.add(Point.fromLngLat(-118.39227981785722, 33.397234885594564))
-    }
 
-    private fun showTrack() {
-        initRouteCoordinates()
+    private fun showTrack(coordinatesList : MutableList<Point>) {
         mapboxMap?.getStyle { style ->
             style.addSource(GeoJsonSource(
                     "line-source",
                     FeatureCollection.fromFeature(
                         Feature.fromGeometry(
-                            LineString.fromLngLats(routeCoordinates)))
+                            LineString.fromLngLats(coordinatesList)))
                 )
                 //VectorSource("museums_source", "mapbox://mapbox.2opop9hr")
             )
@@ -228,6 +215,23 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
+    private fun initRouteCoordinates() {
+// Create a list to store our line coordinates.
+        routeCoordinates.add(Point.fromLngLat(-118.39439114221236, 33.397676454651766));
+        routeCoordinates.add(Point.fromLngLat(-118.39421054012902, 33.39769799454838));
+        routeCoordinates.add(Point.fromLngLat(-118.39408583869053, 33.39761901490136));
+        routeCoordinates.add(Point.fromLngLat(-118.39388373635917, 33.397328225582285));
+        routeCoordinates.add(Point.fromLngLat(-118.39372033447427, 33.39728514560042));
+        routeCoordinates.add(Point.fromLngLat(-118.3930882271826, 33.39756875508861));
+        routeCoordinates.add(Point.fromLngLat(-118.3928216241072, 33.39759029501192));
+        routeCoordinates.add(Point.fromLngLat(-118.39227981785722, 33.397234885594564));
+        routeCoordinates.add(Point.fromLngLat(-118.392021814881, 33.397005125197666));
+        routeCoordinates.add(Point.fromLngLat(-118.39090810203379, 33.396814854409186));
+        routeCoordinates.add(Point.fromLngLat(-118.39040499623022, 33.39696563506828));
+        routeCoordinates.add(Point.fromLngLat(-118.39005669221234, 33.39703025527067));
+        routeCoordinates.add(Point.fromLngLat(-118.38953208616074, 33.39691896489222));
+        routeCoordinates.add(Point.fromLngLat(-118.38906338075398, 33.39695127501678));
+    }
 
     private fun updateDroneLocation() { // this will draw the aircraft as it moves
         //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
@@ -274,18 +278,32 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 setResultToToast(mutableGPSList.size.toString())
             }
         }.start()*/
+        /*Thread {
+            while (!stopButtonPressed) {
+                runOnUiThread {
+                    routeCoordinates.add(Point.fromLngLat(droneLocationLng, droneLocationLat))}
+                Thread.sleep(2000)
+                setResultToToast(routeCoordinates.size.toString())
+            }
+        }.start()*/
         Thread {
             while (!stopButtonPressed) {
                 runOnUiThread {
-                    mutableGeoJson.add(Point.fromLngLat(droneLocationLng, droneLocationLat))}
+                    recordedCoordinates.add(
+                        LatLng( droneLocationLat,
+                                droneLocationLng,
+                                droneLocationAlt.toDouble()
+                        )
+                    )
+                }
                 Thread.sleep(2000)
-                setResultToToast(mutableGeoJson.size.toString())
+                setResultToToast(recordedCoordinates.size.toString())
             }
         }.start()
     }
 
 
-    private fun recordToGFX(points: MutableList<LatLng>){
+    /*private fun recordToGFX(points: MutableList<LatLng>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<gpx\n" +
                 "  version=\"1.1\"\n" +
@@ -320,7 +338,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             e.printStackTrace()
         }
 
-    }
+    }*/
 
     private fun recordtoGEOJson (points: MutableList<Point>)
     {
@@ -342,32 +360,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         try {
             FileOutputStream(fileName).use {
                 it.write(featureCollection.toJson().toByteArray())
+                setResultToToast(recordedCoordinates.toString())
             }
         } catch (e:IOException) {
             e.printStackTrace()
         }
     }
 
-    private fun saveLogFile(stringBufferParam : StringBuffer) {
-            setResultToToast("String is" + stringBufferParam.length.toString())
-            val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
-            val currentDateandTime = sdf.format(Date()).toString() + ".txt"
-            val mydir: File =
-                this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
-            if (!mydir.exists()) {
-                mydir.mkdirs()
-            }
-            val fileName = File(mydir, currentDateandTime)
-            try{
-                FileOutputStream(fileName).use {
-                    it.write(stringBufferParam.toString().toByteArray()) }
-                //display file saved message
-                Toast.makeText(baseContext, "File saved successfully!", Toast.LENGTH_SHORT).show()
-                }
-            catch (e: Exception){
-            e.printStackTrace()
-            }
-    }
 
     override fun onClick(v: View?) {
         when (v?.id) {
@@ -380,48 +379,53 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //coordinateList.add("recording started")
                 //start.isPressed = true
                 if(stopButtonPressed) stopButtonPressed = false
-                try {
-                    recordLocation()
-                }
-                catch (e: IOException)
-                {
-                  setResultToToast(e.toString())
-                }
+                recordLocation()
+
             }
             R.id.stop -> {
                 if (!stopButtonPressed) stopButtonPressed = true
+                //showRecordedWaypoints(recordedCoordinates)
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                try {
-                    recordtoGEOJson(mutableGeoJson)
-                }
-                catch(e : IOException)
-                {
-                    setResultToToast(e.toString())
-                }
+                //recordtoGEOJson(routeCoordinates)
                 //mutableGeoJson = mutableListOf()
                 //setResultToToast(stringBufferGPS.toString())
             }
-            R.id.showTrack ->
-            {
-
-                try {
-                    showTrack()
-                    var newPosition = CameraPosition.Builder()
-                        .target(LatLng(-118.39372033447427, 33.39728514560042))
-                        .zoom(10.0)
-                        .build()
-                    mapboxMap?.animateCamera(CameraUpdateFactory.newCameraPosition(newPosition))
-                }
-                catch (e : IOException)
-                {
-                    setResultToToast(e.toString())
-                }
+            R.id.showTrack -> {
+                //setResultToToast(recordedCoordinates.size.toString())
+                //showTrack(routeCoordinates)
+                initRouteCoordinates()
+                showRecordedWaypoints(routeCoordinates)
             }
         }
     }
 
+    private fun showRecordedWaypoints (points: MutableList<Point>){
+        for (point in points)
+        {
+            val latLng = LatLng(point.latitude(), point.longitude())
+            markWaypoint(latLng)
+        }
+    }
+
+    private fun fromListToWaypoints(points: MutableList<LatLng>) {
+        if (points.isNotEmpty())
+        {
+            for (location in points) {
+                val waypoint = Waypoint(location.latitude, location.longitude, location.altitude.toFloat())
+                if (waypointMissionBuilder == null) {
+                    waypointMissionBuilder = WaypointMission.Builder().also { builder ->
+                        waypointList.add(waypoint) // add the waypoint to the list
+                        builder.waypointList(waypointList).waypointCount(waypointList.size) }
+                } else {
+                    waypointMissionBuilder?.let { builder ->
+                        waypointList.add(waypoint)
+                        builder.waypointList(waypointList).waypointCount(waypointList.size) }
+                }
+            }
+        }
+    }
 
     private fun clearWaypoints(){
         waypointMissionBuilder?.waypointList?.clear()
