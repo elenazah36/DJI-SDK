@@ -29,8 +29,9 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-
-
+import kotlin.math.acos
+import kotlin.math.cos
+import kotlin.math.sin
 
 
 class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnMapReadyCallback, View.OnClickListener {
@@ -42,7 +43,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var mTextGPS: TextView
 
 
-
     companion object {
         const val TAG = "Waypoint1Activity"
         private var waypointMissionBuilder: WaypointMission.Builder? = null // you will use this to add your waypoints
@@ -51,6 +51,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             return latitude > -90 && latitude < 90 && longitude > -180 && longitude < 180 && latitude != 0.0 && longitude != 0.0
         }
     }
+
+    val EARTH_RADIUS_METERS: Double = 6371.0*1000
 
     private var isAdd = false
 
@@ -100,39 +102,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         mapboxMap.setStyle(Style.MAPBOX_STREETS) { // set the view of the map
         }
     }
-
-
-    private fun showTrack(coordinatesList : MutableList<Point>) {
-        mapboxMap?.getStyle { style ->
-            style.addSource(GeoJsonSource(
-                    "line-source",
-                    FeatureCollection.fromFeature(
-                        Feature.fromGeometry(
-                            LineString.fromLngLats(coordinatesList)))
-                )
-                //VectorSource("museums_source", "mapbox://mapbox.2opop9hr")
-            )
-
-            val trackLayer = LineLayer("track_line", "line-source")
-            trackLayer.sourceLayer = "line-source"
-            trackLayer.setProperties(
-                visibility(VISIBLE),
-                lineCap(Property.LINE_CAP_ROUND),
-                lineJoin(Property.LINE_JOIN_ROUND),
-                lineWidth(5f),
-                lineColor(Color.parseColor("#e55e5e")),
-            )
-            style.addLayer(trackLayer)
-        }
-    }
-
-    private fun showWater() {
-        mapboxMap?.getStyle {
-               val waterLayer = it.getLayer("water")
-               waterLayer?.setProperties(PropertyFactory.fillColor(Color.parseColor("#004f6b")))
-            }
-    }
-
 
 
     override fun onMapClick(point: LatLng): Boolean {
@@ -215,23 +184,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun initRouteCoordinates() {
-// Create a list to store our line coordinates.
-        routeCoordinates.add(Point.fromLngLat(-118.39439114221236, 33.397676454651766));
-        routeCoordinates.add(Point.fromLngLat(-118.39421054012902, 33.39769799454838));
-        routeCoordinates.add(Point.fromLngLat(-118.39408583869053, 33.39761901490136));
-        routeCoordinates.add(Point.fromLngLat(-118.39388373635917, 33.397328225582285));
-        routeCoordinates.add(Point.fromLngLat(-118.39372033447427, 33.39728514560042));
-        routeCoordinates.add(Point.fromLngLat(-118.3930882271826, 33.39756875508861));
-        routeCoordinates.add(Point.fromLngLat(-118.3928216241072, 33.39759029501192));
-        routeCoordinates.add(Point.fromLngLat(-118.39227981785722, 33.397234885594564));
-        routeCoordinates.add(Point.fromLngLat(-118.392021814881, 33.397005125197666));
-        routeCoordinates.add(Point.fromLngLat(-118.39090810203379, 33.396814854409186));
-        routeCoordinates.add(Point.fromLngLat(-118.39040499623022, 33.39696563506828));
-        routeCoordinates.add(Point.fromLngLat(-118.39005669221234, 33.39703025527067));
-        routeCoordinates.add(Point.fromLngLat(-118.38953208616074, 33.39691896489222));
-        routeCoordinates.add(Point.fromLngLat(-118.38906338075398, 33.39695127501678));
-    }
 
     private fun updateDroneLocation() { // this will draw the aircraft as it moves
         //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
@@ -303,7 +255,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
-    /*private fun recordToGFX(points: MutableList<LatLng>){
+    private fun recordToGFX(points: MutableList<LatLng>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<gpx\n" +
                 "  version=\"1.1\"\n" +
@@ -338,7 +290,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             e.printStackTrace()
         }
 
-    }*/
+    }
 
     private fun recordtoGEOJson (points: MutableList<Point>)
     {
@@ -368,6 +320,38 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
+    private fun showTrack(coordinatesList : MutableList<Point>) {
+        mapboxMap?.getStyle { style ->
+            style.addSource(GeoJsonSource(
+                "line-source",
+                FeatureCollection.fromFeature(
+                    Feature.fromGeometry(
+                        LineString.fromLngLats(coordinatesList)))
+            )
+                //VectorSource("museums_source", "mapbox://mapbox.2opop9hr")
+            )
+
+            val trackLayer = LineLayer("track_line", "line-source")
+            trackLayer.sourceLayer = "line-source"
+            trackLayer.setProperties(
+                visibility(VISIBLE),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND),
+                lineWidth(5f),
+                lineColor(Color.parseColor("#e55e5e")),
+            )
+            style.addLayer(trackLayer)
+        }
+    }
+
+    private fun showWater() {
+        mapboxMap?.getStyle {
+            val waterLayer = it.getLayer("water")
+            waterLayer?.setProperties(PropertyFactory.fillColor(Color.parseColor("#004f6b")))
+        }
+    }
+
+
     override fun onClick(v: View?) {
         when (v?.id) {
             R.id.locate -> { // will draw the drone and move camera to the position of the drone on the map
@@ -390,22 +374,36 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //stringBufferGPS = StringBuffer()
                 //recordtoGEOJson(routeCoordinates)
                 //mutableGeoJson = mutableListOf()
-                //setResultToToast(stringBufferGPS.toString())
+                setResultToToast("Recording stopped, array size:" + recordedCoordinates.size.toString())
             }
             R.id.showTrack -> {
                 //setResultToToast(recordedCoordinates.size.toString())
                 //showTrack(routeCoordinates)
-                initRouteCoordinates()
-                showRecordedWaypoints(routeCoordinates)
+                showRecordedWaypoints(recordedCoordinates)
             }
         }
     }
 
-    private fun showRecordedWaypoints (points: MutableList<Point>){
+    private fun cleanWaypointList (track: MutableList<Waypoint>)
+    {
+        for (i in 1 until track.size){
+        /*var i = 0
+        while (i < track.size -1)*/
+            val distance = acos(sin(track[i].coordinate.latitude)
+                                *sin(track[i+1].coordinate.latitude)
+                                +cos(track[i+1].coordinate.latitude)*cos(track[i].coordinate.latitude)
+                                *cos(track[i+1].coordinate.longitude-track[i].coordinate.longitude))*EARTH_RADIUS_METERS
+            if (distance <= 2)
+                track.removeAt(i)
+        }
+
+    }
+
+    private fun showRecordedWaypoints (points: MutableList<LatLng>){
         for (point in points)
         {
-            val latLng = LatLng(point.latitude(), point.longitude())
-            markWaypoint(latLng)
+            //val latLng = LatLng(point.latitude(), point.longitude())
+            markWaypoint(point)
         }
     }
 
