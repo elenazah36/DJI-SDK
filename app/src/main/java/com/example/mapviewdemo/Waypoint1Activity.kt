@@ -41,6 +41,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var stop: Button
     private lateinit var showTrack : Button
     private lateinit var mTextGPS: TextView
+    private lateinit var clearWaypoints : Button
 
 
     companion object {
@@ -159,11 +160,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         stop = findViewById(R.id.stop)
         mTextGPS = findViewById(R.id.GPSTextView)
         showTrack = findViewById(R.id.showTrack)
+        clearWaypoints = findViewById(R.id.clearWaypoints)
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
         stop.setOnClickListener(this)
         showTrack.setOnClickListener(this)
+        clearWaypoints.setOnClickListener(this)
     }
 
 
@@ -255,7 +258,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
-    private fun recordToGFX(points: MutableList<LatLng>){
+    private fun recordToGPX(points: MutableList<LatLng>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<gpx\n" +
                 "  version=\"1.1\"\n" +
@@ -289,7 +292,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         } catch (e: IOException) {
             e.printStackTrace()
         }
-
     }
 
     private fun recordtoGEOJson (points: MutableList<Point>)
@@ -312,7 +314,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         try {
             FileOutputStream(fileName).use {
                 it.write(featureCollection.toJson().toByteArray())
-                setResultToToast(recordedCoordinates.toString())
+                setResultToToast("success!")
             }
         } catch (e:IOException) {
             e.printStackTrace()
@@ -351,51 +353,40 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-
-    override fun onClick(v: View?) {
-        when (v?.id) {
-            R.id.locate -> { // will draw the drone and move camera to the position of the drone on the map
-                updateDroneLocation()
-                cameraUpdate()
-                setResultToToast("$droneLocationLat update $droneLocationLng")
-            }
-            R.id.start -> {
-                //coordinateList.add("recording started")
-                //start.isPressed = true
-                if(stopButtonPressed) stopButtonPressed = false
-                recordLocation()
-
-            }
-            R.id.stop -> {
-                if (!stopButtonPressed) stopButtonPressed = true
-                //showRecordedWaypoints(recordedCoordinates)
-                //val copyingStrignBufferGPS = stringBufferGPS
-                //saveLogFile(copyingStrignBufferGPS)
-                //stringBufferGPS = StringBuffer()
-                //recordtoGEOJson(routeCoordinates)
-                //mutableGeoJson = mutableListOf()
-                setResultToToast("Recording stopped, array size:" + recordedCoordinates.size.toString())
-            }
-            R.id.showTrack -> {
-                //setResultToToast(recordedCoordinates.size.toString())
-                //showTrack(routeCoordinates)
-                showRecordedWaypoints(recordedCoordinates)
-            }
-        }
-    }
-
-    private fun cleanWaypointList (track: MutableList<Waypoint>)
+    private fun cleanWaypointList (track: MutableList<Point>)
     {
-        for (i in 1 until track.size){
-        /*var i = 0
-        while (i < track.size -1)*/
-            val distance = acos(sin(track[i].coordinate.latitude)
-                                *sin(track[i+1].coordinate.latitude)
-                                +cos(track[i+1].coordinate.latitude)*cos(track[i].coordinate.latitude)
-                                *cos(track[i+1].coordinate.longitude-track[i].coordinate.longitude))*EARTH_RADIUS_METERS
+        for (i in 0 until track.size - 2){
+            /*var i = 0
+            while (i < track.size -1)*/
+            val distance = acos(sin(track[i].latitude())
+                    *sin(track[i+1].latitude())
+                    +cos(track[i+1].latitude())*cos(track[i].latitude())
+                    *cos(track[i+1].longitude()-track[i].longitude()))*EARTH_RADIUS_METERS
             if (distance <= 2)
                 track.removeAt(i)
         }
+    }
+
+    private fun initRouteCoordinates()
+    {
+        routeCoordinates.add(Point.fromLngLat(-118.39439114221236, 33.397676454651766));
+        routeCoordinates.add(Point.fromLngLat(-118.39421054012902, 33.39769799454838));
+        routeCoordinates.add(Point.fromLngLat(-118.39408583869053, 33.39761901490136));
+        routeCoordinates.add(Point.fromLngLat(-118.39388373635917, 33.397328225582285));
+        routeCoordinates.add(Point.fromLngLat(-118.39372033447427, 33.39728514560042));
+        routeCoordinates.add(Point.fromLngLat(-118.3930882271826, 33.39756875508861));
+        routeCoordinates.add(Point.fromLngLat(-118.3928216241072, 33.39759029501192));
+        routeCoordinates.add(Point.fromLngLat(-118.39227981785722, 33.397234885594564));
+        routeCoordinates.add(Point.fromLngLat(-118.392021814881, 33.397005125197666));
+        routeCoordinates.add(Point.fromLngLat(-118.39090810203379, 33.396814854409186));
+        routeCoordinates.add(Point.fromLngLat(-118.39040499623022, 33.39696563506828));
+        routeCoordinates.add(Point.fromLngLat(-118.39005669221234, 33.39703025527067));
+        routeCoordinates.add(Point.fromLngLat(-118.38953208616074, 33.39691896489222));
+        routeCoordinates.add(Point.fromLngLat(-118.38906338075398, 33.39695127501678));
+        routeCoordinates.add(Point.fromLngLat(-118.38891287901787, 33.39686511465794));
+        routeCoordinates.add(Point.fromLngLat(-118.38898167981154, 33.39671074380141));
+        routeCoordinates.add(Point.fromLngLat(-118.38984598978178, 33.396064537239404));
+        routeCoordinates.add(Point.fromLngLat(-118.38983738968255, 33.39582400356976));
 
     }
 
@@ -407,7 +398,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun fromListToWaypoints(points: MutableList<LatLng>) {
+    private fun fromListToWaypoints(points: MutableList<LatLng>): MutableList<Waypoint> {
         if (points.isNotEmpty())
         {
             for (location in points) {
@@ -423,7 +414,49 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 }
             }
         }
+        return waypointList
     }
+
+
+    override fun onClick(v: View?) {
+        when (v?.id) {
+            R.id.locate -> { // will draw the drone and move camera to the position of the drone on the map
+                updateDroneLocation()
+                cameraUpdate()
+                setResultToToast("$droneLocationLat update $droneLocationLng")
+            }
+            R.id.start -> {
+                //coordinateList.add("recording started")
+                //start.isPressed = true
+                if(stopButtonPressed) stopButtonPressed = false
+                //recordLocation()
+                initRouteCoordinates()
+
+            }
+            R.id.stop -> {
+                if (!stopButtonPressed) stopButtonPressed = true
+                //showRecordedWaypoints(recordedCoordinates)
+                //val copyingStrignBufferGPS = stringBufferGPS
+                //saveLogFile(copyingStrignBufferGPS)
+                //stringBufferGPS = StringBuffer()
+                //recordToGPX(recordedCoordinates)
+                //mutableGeoJson = mutableListOf()
+                setResultToToast("Route coordinates:" + routeCoordinates.size.toString())
+            }
+            R.id.showTrack -> {
+                //setResultToToast(recordedCoordinates.size.toString())
+                //showTrack(routeCoordinates)
+                showTrack(routeCoordinates)
+            }
+            R.id.clearWaypoints -> {
+                cleanWaypointList(routeCoordinates)
+
+                //showRecordedWaypoints(recordedCoordinates)
+            }
+        }
+    }
+
+
 
     private fun clearWaypoints(){
         waypointMissionBuilder?.waypointList?.clear()
