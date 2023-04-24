@@ -3,9 +3,14 @@ package com.example.mapviewdemo
 
 import android.graphics.Color
 import android.os.Bundle
+import android.graphics.SurfaceTexture
+import android.view.TextureView
+import android.widget.Toast
+import android.widget.ToggleButton
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.example.mapviewdemo.DJIDemoApplication.getCameraInstance
 import com.mapbox.geojson.*
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
@@ -21,10 +26,22 @@ import com.mapbox.mapboxsdk.style.layers.*
 import com.mapbox.mapboxsdk.style.layers.Property.VISIBLE
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import androidx.lifecycle.lifecycleScope
+import com.example.mapviewdemo.DJIDemoApplication.getProductInstance
+import dji.common.camera.SettingsDefinitions.CameraMode
+import dji.common.camera.SettingsDefinitions.ShootPhotoMode
+import dji.common.product.Model
+import dji.sdk.base.BaseProduct
+import dji.sdk.camera.Camera
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
+import dji.sdk.camera.VideoFeeder
+import dji.sdk.codec.DJICodecManager
+import dji.sdk.products.Aircraft
+import dji.sdk.products.HandHeld
 import dji.sdk.mission.waypoint.WaypointMissionOperator
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener
+import dji.sdk.sdkmanager.DJISDKManager
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,10 +49,13 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.launch
 
 
-class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnMapReadyCallback, View.OnClickListener {
+class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnMapReadyCallback, View.OnClickListener, TextureView.SurfaceTextureListener{
 
+
+    //waypoint
     private lateinit var locate: Button
     private lateinit var start: Button
     private lateinit var stop: Button
@@ -43,6 +63,16 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var mTextGPS: TextView
     private lateinit var clearWaypoints : Button
 
+    //recording
+    private var receivedVideoDataListener: VideoFeeder.VideoDataListener? = null
+    private var codecManager: DJICodecManager? = null //handles the encoding and decoding of video data
+
+    private lateinit var videoSurface: TextureView //Used to display the DJI product's camera video stream
+    private lateinit var captureBtn: Button
+    private lateinit var shootPhotoModeBtn: Button
+    private lateinit var recordVideoModeBtn: Button
+    private lateinit var recordBtn: ToggleButton
+    private lateinit var recordingTime: TextView
 
     companion object {
         const val TAG = "Waypoint1Activity"
@@ -95,6 +125,35 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         mapFragment.onCreate(savedInstanceState)
         mapFragment.getMapAsync(this)
         addListener() // will add a listener to the waypoint mission operator
+
+        receivedVideoDataListener = VideoFeeder.VideoDataListener { videoBuffer, size ->
+            codecManager?.sendDataToDecoder(videoBuffer, size)
+        }
+
+        getCameraInstance()?.let { camera ->
+            camera.setSystemStateCallback {
+                it.let { systemState ->
+                    //Getting elapsed video recording time in minutes and seconds, then converting into a time string
+                    val recordTime = systemState.currentVideoRecordingTimeInSeconds
+                    val minutes = (recordTime % 3600) / 60
+                    val seconds = recordTime % 60
+                    val timeString = String.format("%02d:%02d", minutes, seconds)
+
+                    //Accessing the UI thread to update the activity's UI
+                    runOnUiThread {
+                        //If the camera is video recording, display the time string on the recordingTime TextView
+                        recordingTime.text = timeString
+                        if (systemState.isRecording) {
+                            recordingTime.visibility = View.VISIBLE
+
+                        } else {
+                            recordingTime.visibility = View.INVISIBLE
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     override fun onMapReady(mapboxMap: MapboxMap) {
@@ -167,9 +226,116 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         stop.setOnClickListener(this)
         showTrack.setOnClickListener(this)
         clearWaypoints.setOnClickListener(this)
+
+        videoSurface = findViewById(R.id.video_previewer_surface)
+        recordingTime = findViewById(R.id.timer)
+        captureBtn = findViewById(R.id.btn_capture)
+        recordBtn = findViewById(R.id.btn_record)
+        shootPhotoModeBtn = findViewById(R.id.btn_shoot_photo_mode)
+        recordVideoModeBtn = findViewById(R.id.btn_record_video_mode)
+
+        videoSurface.surfaceTextureListener = this
+        captureBtn.setOnClickListener(this)
+        shootPhotoModeBtn.setOnClickListener(this)
+        recordVideoModeBtn.setOnClickListener(this)
+
+        recordingTime.visibility = View.INVISIBLE
+
+        recordBtn.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (isChecked) {
+                startRecord()
+            } else {
+                stopRecord()
+            }
+        }
     }
 
+    private fun startRecord() {
+        val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
 
+        /*
+        starts the camera video recording and receives a callback. If the callback returns an error that
+        is null, the operation is successful.
+        */
+        camera.startRecordVideo {
+            if (it == null) {
+                setResultToToast("Record Video: Success")
+            } else {
+                setResultToToast("Record Video Error: ${it.description}")
+            }
+        }
+    }
+
+    //Function to make the DJI product's camera stop video recording
+    private fun stopRecord() {
+        val camera = getCameraInstance() ?: return //get camera instance or null if it doesn't exist
+
+        /*
+        stops the camera video recording and receives a callback. If the callback returns an error that
+        is null, the operation is successful.
+        */
+        camera.stopRecordVideo {
+            if (it == null) {
+                setResultToToast("Stop Recording: Success")
+            } else {
+                setResultToToast("Stop Recording: Error ${it.description}")
+            }
+        }
+    }
+
+    //Function that initializes the display for the videoSurface TextureView
+    private fun initPreviewer() {
+
+        //gets an instance of the connected DJI product (null if nonexistent)
+        val product: BaseProduct = getProductInstance() ?: return
+
+        //if DJI product is disconnected, alert the user
+        if (!product.isConnected) {
+            setResultToToast(getString(R.string.disconnected))
+        } else {
+            /*
+            if the DJI product is connected and the aircraft model is not unknown, add the
+            receivedVideoDataListener to the primary video feed.
+            */
+            videoSurface.surfaceTextureListener = this
+            if (product.model != Model.UNKNOWN_AIRCRAFT) {
+                receivedVideoDataListener?.let {
+                    VideoFeeder.getInstance().primaryVideoFeed.addVideoDataListener(
+                        it
+                    )
+                }
+            }
+        }
+    }
+
+    private fun uninitPreviewer() {
+        val camera: Camera = getCameraInstance() ?: return
+    }
+
+    override fun onPause() {
+        uninitPreviewer()
+        super.onPause()
+    }
+
+    //When a TextureView's SurfaceTexture is ready for use, use it to initialize the codecManager
+    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+        if (codecManager == null) {
+            codecManager = DJICodecManager(this, surface, width, height)
+        }
+    }
+
+    //when a SurfaceTexture's size changes...
+    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+
+    //when a SurfaceTexture is about to be destroyed, uninitialize the codedManager
+    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+        codecManager?.cleanSurface()
+        codecManager = null
+        return false
+    }
+
+    //When a SurfaceTexture is updated...
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
 
     private fun initFlightController() {
         // this will initialize the flight controller with predetermined data
@@ -367,28 +533,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun initRouteCoordinates()
-    {
-        routeCoordinates.add(Point.fromLngLat(-118.39439114221236, 33.397676454651766));
-        routeCoordinates.add(Point.fromLngLat(-118.39421054012902, 33.39769799454838));
-        routeCoordinates.add(Point.fromLngLat(-118.39408583869053, 33.39761901490136));
-        routeCoordinates.add(Point.fromLngLat(-118.39388373635917, 33.397328225582285));
-        routeCoordinates.add(Point.fromLngLat(-118.39372033447427, 33.39728514560042));
-        routeCoordinates.add(Point.fromLngLat(-118.3930882271826, 33.39756875508861));
-        routeCoordinates.add(Point.fromLngLat(-118.3928216241072, 33.39759029501192));
-        routeCoordinates.add(Point.fromLngLat(-118.39227981785722, 33.397234885594564));
-        routeCoordinates.add(Point.fromLngLat(-118.392021814881, 33.397005125197666));
-        routeCoordinates.add(Point.fromLngLat(-118.39090810203379, 33.396814854409186));
-        routeCoordinates.add(Point.fromLngLat(-118.39040499623022, 33.39696563506828));
-        routeCoordinates.add(Point.fromLngLat(-118.39005669221234, 33.39703025527067));
-        routeCoordinates.add(Point.fromLngLat(-118.38953208616074, 33.39691896489222));
-        routeCoordinates.add(Point.fromLngLat(-118.38906338075398, 33.39695127501678));
-        routeCoordinates.add(Point.fromLngLat(-118.38891287901787, 33.39686511465794));
-        routeCoordinates.add(Point.fromLngLat(-118.38898167981154, 33.39671074380141));
-        routeCoordinates.add(Point.fromLngLat(-118.38984598978178, 33.396064537239404));
-        routeCoordinates.add(Point.fromLngLat(-118.38983738968255, 33.39582400356976));
-
-    }
 
     private fun showRecordedWaypoints (points: MutableList<LatLng>){
         for (point in points)
@@ -430,7 +574,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //start.isPressed = true
                 if(stopButtonPressed) stopButtonPressed = false
                 //recordLocation()
-                initRouteCoordinates()
 
             }
             R.id.stop -> {
@@ -453,10 +596,62 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
                 //showRecordedWaypoints(recordedCoordinates)
             }
+
+            R.id.btn_capture -> {
+                captureAction()
+            }
+            //If the shoot photo mode button is pressed, set camera to only take photos
+            R.id.btn_shoot_photo_mode -> {
+                switchCameraMode(CameraMode.SHOOT_PHOTO)
+            }
+            //If the record video mode button is pressed, set camera to only record videos
+            R.id.btn_record_video_mode -> {
+                switchCameraMode(CameraMode.RECORD_VIDEO)
+            }
         }
     }
 
 
+    private fun captureAction() {
+        val camera: Camera = getCameraInstance() ?: return
+
+        /*
+        Setting the camera capture mode to SINGLE, and then taking a photo using the camera.
+        If the resulting callback for each operation returns an error that is null, then the
+        two operations are successful.
+        */
+        val photoMode = ShootPhotoMode.SINGLE
+        camera.setShootPhotoMode(photoMode) { djiError ->
+            if (djiError == null) {
+                lifecycleScope.launch {
+                    camera.startShootPhoto { djiErrorSecond ->
+                        if (djiErrorSecond == null) {
+                            setResultToToast("take photo: success")
+                        } else {
+                            setResultToToast("Take Photo Failure: ${djiError?.description}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+    Function for setting the camera mode. If the resulting callback returns an error that
+    is null, then the operation was successful.
+    */
+    private fun switchCameraMode(cameraMode: CameraMode) {
+        val camera: Camera = getCameraInstance() ?: return
+
+        camera.setMode(cameraMode) { error ->
+            if (error == null) {
+                setResultToToast("Switch Camera Mode Succeeded")
+            } else {
+                setResultToToast("Switch Camera Error: ${error.description}")
+            }
+        }
+
+    }
 
     private fun clearWaypoints(){
         waypointMissionBuilder?.waypointList?.clear()
@@ -514,5 +709,47 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             mavicMiniMissionOperator = MavicMiniMissionOperator(this)
         }
         return mavicMiniMissionOperator
+    }
+
+
+    private fun getProductInstance(): BaseProduct? {
+        return DJISDKManager.getInstance().product
+    }
+
+    /*
+    Function used to get an instance of the camera in use from the DJI product
+    */
+    private fun getCameraInstance(): Camera? {
+        if (getProductInstance() == null) return null
+
+        return when {
+            getProductInstance() is Aircraft -> {
+                (getProductInstance() as Aircraft).camera
+            }
+            getProductInstance() is HandHeld -> {
+                (getProductInstance() as HandHeld).camera
+            }
+            else -> null
+        }
+    }
+
+    //Function that returns True if a DJI aircraft is connected
+    private fun isAircraftConnected(): Boolean {
+        return getProductInstance() != null && getProductInstance() is Aircraft
+    }
+
+    //Function that returns True if a DJI product is connected
+    private fun isProductModuleAvailable(): Boolean {
+        return (getProductInstance() != null)
+    }
+
+    //Function that returns True if a DJI product's camera is available
+    private fun isCameraModuleAvailable(): Boolean {
+        return isProductModuleAvailable() && (getProductInstance()?.camera != null)
+    }
+
+    //Function that returns True if a DJI camera's playback feature is available
+    private fun isPlaybackAvailable(): Boolean {
+        return isCameraModuleAvailable() && (getProductInstance()?.camera?.playbackManager != null)
     }
 }

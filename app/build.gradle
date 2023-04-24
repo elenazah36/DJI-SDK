@@ -90,6 +90,7 @@ android {
 
 dependencies {
 
+    implementation 'androidx.documentfile:documentfile:1.0.1'
     //DJI Dependencies
     implementation 'androidx.multidex:multidex:2.0.0'
     implementation ('com.dji:dji-sdk:4.16.1', {
@@ -121,4 +122,6 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
+    apply from : "https://terra-1-g.djicdn.com/71a7d383e71a4fb8887a310eb746b47f/msdk/Android-CommonConfig/config_sample_all.gradle"
 }
