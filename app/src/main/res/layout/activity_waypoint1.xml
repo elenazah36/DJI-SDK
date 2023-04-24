@@ -56,11 +56,17 @@
             android:layout_height="wrap_content"
             android:text="Track"
             android:layout_weight="1"/>
+        <Button
+            android:id="@+id/clearWaypoints"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Clear"
+            android:layout_weight="1"/>
         <TextView
             android:id="@+id/GPSTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="GPS Coordinates"
+            android:text="GPS Data"
             android:gravity="center"
             android:textColor="#000000"
             android:textSize="15sp"
