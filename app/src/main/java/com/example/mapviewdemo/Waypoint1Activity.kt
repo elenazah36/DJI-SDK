@@ -211,7 +211,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
-    override fun onMapClick(point: LatLng): Boolean {
+    /*override fun onMapClick(point: LatLng): Boolean {
         if (isAdd) { // if the user is adding waypoints
             markWaypoint(point) // this will mark the waypoint visually
             val waypoint = Waypoint(point.latitude, point.longitude, point.altitude.toFloat()) // this will create the waypoint object to be added to the mission
@@ -231,7 +231,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             setResultToToast("Cannot Add Waypoint")
         }
         return true
-    }
+    }*/
 
     private fun markWaypoint(point: LatLng) {
         val markerOptions = MarkerOptions()
@@ -337,9 +337,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun cleanWaypointList (track: MutableList<LatLng>)
     {
-        for (i in 0 until track.size - 2){
-            /*var i = 0
-            while (i < track.size -1)*/
+        var i = 0
+        while (i < track.size -1)
+        {
             val distance = acos(sin(track[i].latitude)
                     *sin(track[i+1].latitude)
                     +cos(track[i+1].latitude)*cos(track[i].latitude)
@@ -395,6 +395,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY)
                 isGimbalPitchRotationEnabled = true
             }
+            setResultToToast("Mission builder is null")
         }
 
         waypointMissionBuilder?.let { builder ->
@@ -614,7 +615,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                //recordToGPX(recordedCoordinates)
+                recordToGPX(recordedCoordinates)
                 //mutableGeoJson = mutableListOf()
                 setResultToToast("Route coordinates:" + recordedCoordinates.size.toString())
             }
