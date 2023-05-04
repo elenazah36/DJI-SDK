@@ -211,7 +211,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
-    /*override fun onMapClick(point: LatLng): Boolean {
+    override fun onMapClick(point: LatLng): Boolean {
         if (isAdd) { // if the user is adding waypoints
             markWaypoint(point) // this will mark the waypoint visually
             val waypoint = Waypoint(point.latitude, point.longitude, point.altitude.toFloat()) // this will create the waypoint object to be added to the mission
@@ -231,7 +231,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             setResultToToast("Cannot Add Waypoint")
         }
         return true
-    }*/
+    }
 
     private fun markWaypoint(point: LatLng) {
         val markerOptions = MarkerOptions()
@@ -389,15 +389,17 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
         if (waypointMissionBuilder == null) {
             waypointMissionBuilder = WaypointMission.Builder().apply {
+                finishedAction(finishedAction)
+                headingMode(headingMode)
                 autoFlightSpeed(speed)
                 maxFlightSpeed(speed)
                 flightPathMode(WaypointMissionFlightPathMode.NORMAL)
                 gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY)
                 isGimbalPitchRotationEnabled = true
             }
-            setResultToToast("Mission builder is null")
+            setResultToToast("Mission builder was null")
         }
-
+        else
         waypointMissionBuilder?.let { builder ->
             builder.apply {
                 finishedAction(finishedAction)
@@ -409,7 +411,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 isGimbalPitchRotationEnabled = true
             }
 
-            if (builder.waypointList.size > 0) {
+            if (waypointMissionBuilder!!.waypointList.size > 0) {
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
                     builder.waypointList[i].altitude = altitude
                     builder.waypointList[i].heading = 0
@@ -438,6 +440,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
     private fun uploadWaypointMission() { // upload the mission
+        if (getWaypointMissionOperator() == null)
+            setResultToToast("waypointmission null")
         getWaypointMissionOperator()!!.uploadMission { error ->
             if (error == null) {
                 setResultToToast("Mission upload successfully!")
@@ -624,6 +628,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //showTrack(routeCoordinates)
                 createWaypoinMission(recordedCoordinates)
                 showRecordedWaypoints(recordedCoordinates)
+                cameraUpdate()
             }
             R.id.clearWaypoints -> {
                 cleanWaypointList(recordedCoordinates)
@@ -740,4 +745,5 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         uninitPreviewer()
         super.onPause()
     }
+
 }
