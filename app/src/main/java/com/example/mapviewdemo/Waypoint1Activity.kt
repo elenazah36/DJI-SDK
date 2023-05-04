@@ -411,7 +411,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 isGimbalPitchRotationEnabled = true
             }
 
-            if (waypointMissionBuilder!!.waypointList.size > 0) {
+            if (builder.waypointList.size > 0) {
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
                     builder.waypointList[i].altitude = altitude
                     builder.waypointList[i].heading = 0
@@ -507,6 +507,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 setResultToToast("Stop Recording: Error ${it.description}")
             }
         }
+    }
+
+    private fun storageLocation()
+    {
+        val camera = getCameraInstance() ?: return
+         val whetherInternalOrSD = camera.isInternalStorageSupported
+        setResultToToast(whetherInternalOrSD.toString())
     }
 
     private fun captureAction() {
