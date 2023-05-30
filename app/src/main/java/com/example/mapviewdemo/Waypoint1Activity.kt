@@ -1,6 +1,7 @@
 package com.example.mapviewdemo
 
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
 import android.graphics.SurfaceTexture
@@ -162,8 +163,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         locate = findViewById(R.id.locate)
         start = findViewById(R.id.start)
         stop = findViewById(R.id.stop)
-        config = findViewById(R.id.start)
-        upload = findViewById(R.id.stop)
+        config = findViewById(R.id.config)
+        upload = findViewById(R.id.upload)
         mTextGPS = findViewById(R.id.GPSTextView)
         showTrack = findViewById(R.id.showTrack)
         clearWaypoints = findViewById(R.id.clearWaypoints)
@@ -297,6 +298,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }.start()
     }
 
+    private fun initializeWaypointList(){
+        recordedCoordinates = mutableListOf()
+        recordedCoordinates.add(LatLng(33.685699, 45.522585, 2.0))
+        recordedCoordinates.add(LatLng(33.708873, 45.534611, 2.0))
+        recordedCoordinates.add(LatLng(33.678833, 45.530883, 2.0))
+        recordedCoordinates.add(LatLng(33.667503, 45.547115, 2.0))
+    }
+
 
     private fun recordToGPX(points: MutableList<LatLng>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
@@ -346,6 +355,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     *cos(track[i+1].longitude-track[i].longitude))*EARTH_RADIUS_METERS
             if (distance <= 2)
                 track.removeAt(i)
+            i++
         }
         setResultToToast(track.size.toString())
     }
@@ -359,7 +369,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun createWaypoinMission(points: MutableList<LatLng>): MutableList<Waypoint> {
+    private fun createWaypointMission(points: MutableList<LatLng>): MutableList<Waypoint> {
         if (points.isNotEmpty())
         {
             for (location in points) {
@@ -617,7 +627,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //coordinateList.add("recording started")
                 //start.isPressed = true
                 if(stopButtonPressed) stopButtonPressed = false
-                recordLocation()
+                //recordLocation()
+                initializeWaypointList()
 
             }
             R.id.stop -> {
@@ -626,14 +637,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                recordToGPX(recordedCoordinates)
+                //recordToGPX(recordedCoordinates)
                 //mutableGeoJson = mutableListOf()
                 setResultToToast("Route coordinates:" + recordedCoordinates.size.toString())
             }
             R.id.showTrack -> {
                 //setResultToToast(recordedCoordinates.size.toString())
                 //showTrack(routeCoordinates)
-                createWaypoinMission(recordedCoordinates)
+                createWaypointMission(recordedCoordinates)
                 showRecordedWaypoints(recordedCoordinates)
                 cameraUpdate()
             }
