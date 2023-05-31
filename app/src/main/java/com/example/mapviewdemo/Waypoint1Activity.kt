@@ -65,6 +65,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var showTrack : Button
     private lateinit var mTextGPS: TextView
     private lateinit var clearWaypoints : Button
+    private lateinit var start_mission: Button
+    private lateinit var stop_mission: Button
 
     //recording
     private var receivedVideoDataListener: VideoFeeder.VideoDataListener? = null
@@ -168,6 +170,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         mTextGPS = findViewById(R.id.GPSTextView)
         showTrack = findViewById(R.id.showTrack)
         clearWaypoints = findViewById(R.id.clearWaypoints)
+        start_mission = findViewById(R.id.start_mission)
+        stop_mission = findViewById(R.id.stop_mission)
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
@@ -176,6 +180,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         upload.setOnClickListener(this)
         showTrack.setOnClickListener(this)
         clearWaypoints.setOnClickListener(this)
+        start_mission.setOnClickListener(this)
+        stop_mission.setOnClickListener(this)
 
         videoSurface = findViewById(R.id.video_previewer_surface)
         recordingTime = findViewById(R.id.timer)
@@ -298,13 +304,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }.start()
     }
 
-    private fun initializeWaypointList(){
+    /*private fun initializeWaypointList(){
         recordedCoordinates = mutableListOf()
         recordedCoordinates.add(LatLng(33.685699, 45.522585, 2.0))
         recordedCoordinates.add(LatLng(33.708873, 45.534611, 2.0))
         recordedCoordinates.add(LatLng(33.678833, 45.530883, 2.0))
         recordedCoordinates.add(LatLng(33.667503, 45.547115, 2.0))
-    }
+    }*/
 
 
     private fun recordToGPX(points: MutableList<LatLng>){
@@ -422,17 +428,18 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             }
 
             if (builder.waypointList.size > 0) {
+                var averageAltitude = 0.0f
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
-                    builder.waypointList[i].altitude = altitude
+                    averageAltitude += builder.waypointList[i].altitude
                     builder.waypointList[i].heading = 0
                     builder.waypointList[i].actionRepeatTimes = 1
                     builder.waypointList[i].actionTimeoutInSeconds = 30
                     builder.waypointList[i].turnMode = WaypointTurnMode.CLOCKWISE
                     builder.waypointList[i].addAction(WaypointAction(WaypointActionType.GIMBAL_PITCH, -90))
-                    builder.waypointList[i].addAction(WaypointAction(WaypointActionType.START_TAKE_PHOTO, 0))
-                    builder.waypointList[i].shootPhotoDistanceInterval = 28.956f
+                    //builder.waypointList[i].addAction(WaypointAction(WaypointActionType.START_TAKE_PHOTO, 0))
+                    //builder.waypointList[i].shootPhotoDistanceInterval = 28.956f
                 }
-                setResultToToast("Set Waypoint attitude successfully")
+                setResultToToast("Altitude =" + averageAltitude/builder.waypointList.size)
             }
             getWaypointMissionOperator()?.let { operator ->
                 val error = operator.loadMission(builder.build()) // load the mission
@@ -627,8 +634,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //coordinateList.add("recording started")
                 //start.isPressed = true
                 if(stopButtonPressed) stopButtonPressed = false
-                //recordLocation()
-                initializeWaypointList()
+                recordLocation()
+                //initializeWaypointList()
 
             }
             R.id.stop -> {
@@ -637,7 +644,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                //recordToGPX(recordedCoordinates)
+                recordToGPX(recordedCoordinates)
                 //mutableGeoJson = mutableListOf()
                 setResultToToast("Route coordinates:" + recordedCoordinates.size.toString())
             }
@@ -658,6 +665,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
             R.id.upload -> {
                 uploadWaypointMission()
+            }
+            R.id.start_mission-> {
+                startWaypointMission()
+            }
+
+            R.id.stop_mission -> {
+                stopWaypointMission()
             }
             R.id.btn_capture -> {
                 captureAction()

@@ -42,6 +42,18 @@
             android:layout_height="wrap_content"
             android:text="Upload"
             android:layout_weight="1"/>
+        <Button
+            android:id="@+id/start_mission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="start mission"
+            android:layout_weight="1"/>
+        <Button
+            android:id="@+id/stop_mission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="stop mission"
+            android:layout_weight="1"/>
     </LinearLayout>
 
     <LinearLayout

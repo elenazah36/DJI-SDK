@@ -411,7 +411,7 @@ class MavicMiniMissionOperator(context: Context) {
         if (!isLanding) {
             showToast(mContext, "trying to land")
         }
-        DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(30){
+        DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(20){
             DJIDemoApplication.getFlightController()?.startGoHome(callback)
         }
     }
