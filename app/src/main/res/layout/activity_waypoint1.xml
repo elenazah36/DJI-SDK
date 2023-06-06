@@ -186,9 +186,16 @@
             android:layout_weight="1"
             android:text="Record Video Mode" />
 
+        <Button
+            android:id="@+id/btn_startland"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="LAND" />
+
         <TextView
             android:id="@+id/timer"
-            android:layout_width="105dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignTop="@+id/video_previewer_surface"
             android:layout_centerHorizontal="true"

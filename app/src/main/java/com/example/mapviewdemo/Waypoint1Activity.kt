@@ -1,17 +1,13 @@
 package com.example.mapviewdemo
 
 
-import android.annotation.SuppressLint
-import android.graphics.Color
-import android.os.Bundle
 import android.graphics.SurfaceTexture
+import android.os.Bundle
 import android.view.TextureView
-import android.widget.Toast
-import android.widget.ToggleButton
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.example.mapviewdemo.DJIDemoApplication.getCameraInstance
+import androidx.lifecycle.lifecycleScope
 import com.mapbox.geojson.*
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
@@ -24,25 +20,26 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
 import com.mapbox.mapboxsdk.style.layers.*
-import com.mapbox.mapboxsdk.style.layers.Property.VISIBLE
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
-import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import androidx.lifecycle.lifecycleScope
-import com.example.mapviewdemo.DJIDemoApplication.getProductInstance
 import dji.common.camera.SettingsDefinitions.CameraMode
 import dji.common.camera.SettingsDefinitions.ShootPhotoMode
-import dji.common.product.Model
-import dji.sdk.base.BaseProduct
-import dji.sdk.camera.Camera
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
+import dji.common.product.Model
+import dji.common.util.CommonCallbacks
+import dji.common.util.CommonCallbacks.CompletionCallback
+import dji.midware.util.ContextUtil.getContext
+import dji.sdk.base.BaseProduct
+import dji.sdk.camera.Camera
 import dji.sdk.camera.VideoFeeder
 import dji.sdk.codec.DJICodecManager
-import dji.sdk.products.Aircraft
-import dji.sdk.products.HandHeld
+import dji.sdk.flightcontroller.FlightController
 import dji.sdk.mission.waypoint.WaypointMissionOperator
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener
+import dji.sdk.products.Aircraft
+import dji.sdk.products.HandHeld
 import dji.sdk.sdkmanager.DJISDKManager
+import kotlinx.coroutines.launch
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -50,12 +47,11 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlinx.coroutines.launch
 
 
 class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnMapReadyCallback, View.OnClickListener, TextureView.SurfaceTextureListener{
 
-
+    private var flightController: FlightController? = null
     //waypoint
     private lateinit var locate: Button
     private lateinit var start: Button
@@ -68,6 +64,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var start_mission: Button
     private lateinit var stop_mission: Button
     private lateinit var force_stop: Button
+    private lateinit var startland: Button
 
     //recording
     private var receivedVideoDataListener: VideoFeeder.VideoDataListener? = null
@@ -175,6 +172,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         start_mission = findViewById(R.id.start_mission)
         stop_mission = findViewById(R.id.stop_mission)
         force_stop = findViewById(R.id.forceStop)
+        startland = findViewById(R.id.btn_startland)
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
@@ -186,6 +184,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         start_mission.setOnClickListener(this)
         stop_mission.setOnClickListener(this)
         force_stop.setOnClickListener(this)
+        startland.setOnClickListener(this)
 
         videoSurface = findViewById(R.id.video_previewer_surface)
         recordingTime = findViewById(R.id.timer)
@@ -255,6 +254,23 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun initFlightController() {
         // this will initialize the flight controller with predetermined data
+
+        // We recommend you use the below settings, a standard american hand style.
+//        if (flightController == null) {
+//                flightController = DJIDemoApplication.getFlightController()
+//        }
+//        flightController?.let { flightController ->
+//            flightController.setStateCallback { flightControllerState ->
+//                // set the latitude and longitude of the drone based on aircraft location
+//                droneLocationLat = flightControllerState.aircraftLocation.latitude
+//                droneLocationLng = flightControllerState.aircraftLocation.longitude
+//                droneLocationAlt = flightControllerState.aircraftLocation.altitude
+//                runOnUiThread {
+//                    mavicMiniMissionOperator?.droneLocationMutableLiveData?.postValue(flightControllerState.aircraftLocation)
+//                    updateDroneLocation() // this will be called on the main thread
+//                }
+//            }
+//        }
         DJIDemoApplication.getFlightController()?.let { flightController ->
             flightController.setStateCallback { flightControllerState ->
                 // set the latitude and longitude of the drone based on aircraft location
@@ -706,6 +722,21 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             R.id.forceStop -> {
                 forceStopWaypointMission()
             }
+            R.id.btn_startland -> {
+//                forceStopWaypointMission()
+                DJIDemoApplication.getFlightController()?.let { controller ->
+                    controller.startLanding { djiError ->
+                        if (djiError != null) {
+//                            Log.i(TAG, djiError.description)
+                            setResultToToast("Landing Error: ${djiError.description}")
+                        } else {
+//                            Log.i(TAG,"Start Landing Success")
+                            setResultToToast("Start Landing Success")
+                        }
+                    }
+                }
+            }
+
             R.id.btn_capture -> {
                 captureAction()
             }
