@@ -67,6 +67,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var clearWaypoints : Button
     private lateinit var start_mission: Button
     private lateinit var stop_mission: Button
+    private lateinit var force_stop: Button
 
     //recording
     private var receivedVideoDataListener: VideoFeeder.VideoDataListener? = null
@@ -108,6 +109,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private var mavicMiniMissionOperator: MavicMiniMissionOperator? = null
 
     private val waypointList = mutableListOf<Waypoint>()
+    private val recordedwaypointList : MutableList<Waypoint> = mutableListOf()
     private var instance: WaypointMissionOperator? = null
     private var finishedAction = WaypointMissionFinishedAction.NO_ACTION
     private var headingMode = WaypointMissionHeadingMode.AUTO
@@ -172,6 +174,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         clearWaypoints = findViewById(R.id.clearWaypoints)
         start_mission = findViewById(R.id.start_mission)
         stop_mission = findViewById(R.id.stop_mission)
+        force_stop = findViewById(R.id.forceStop)
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
@@ -182,6 +185,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         clearWaypoints.setOnClickListener(this)
         start_mission.setOnClickListener(this)
         stop_mission.setOnClickListener(this)
+        force_stop.setOnClickListener(this)
 
         videoSurface = findViewById(R.id.video_previewer_surface)
         recordingTime = findViewById(R.id.timer)
@@ -268,9 +272,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun updateDroneLocation() { // this will draw the aircraft as it moves
         //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
-        if (droneLocationLat.isNaN() || droneLocationLng.isNaN())  { return }
+        if (droneLocationLat.isNaN() || droneLocationLng.isNaN()) { return }
         val sb = StringBuffer()
-        val pos = LatLng(droneLocationLat, droneLocationLng)
+        val pos = LatLng(droneLocationLat, droneLocationLng, droneLocationAlt.toDouble())
+        val wayPt = Waypoint(droneLocationLat, droneLocationLng, droneLocationAlt)
         // the following will draw the aircraft on the screen
         val markerOptions = MarkerOptions()
             .position(pos)
@@ -279,9 +284,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             droneMarker?.remove()
             if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
                 droneMarker = mapboxMap?.addMarker(markerOptions)
-                sb.append("Latitude:").append(pos.latitude).append("\n")
-                sb.append("Longitude:").append(pos.longitude).append("\n")
-                sb.append("Altitude:").append(pos.altitude).append("\n")
+                sb.append("Latitude:").append(wayPt.coordinate.latitude).append("\n")
+                sb.append("Longitude:").append(wayPt.coordinate.longitude).append("\n")
+                sb.append("Altitude:").append(wayPt.altitude).append("\n")
                 mTextGPS.text = sb.toString()
             }
         }
@@ -291,15 +296,20 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         Thread {
             while (!stopButtonPressed) {
                 runOnUiThread {
+                    /*
                     recordedCoordinates.add(
-                        LatLng( droneLocationLat,
+                        LatLng(droneLocationLat,
                             droneLocationLng,
-                            droneLocationAlt.toDouble()
-                        )
+                            droneLocationAlt.toDouble())
+                    )*/
+                    recordedwaypointList.add(
+                        Waypoint(droneLocationLat,
+                                droneLocationLng,
+                                droneLocationAlt)
                     )
                 }
                 Thread.sleep(2000)
-                setResultToToast(recordedCoordinates.size.toString())
+                setResultToToast(recordedwaypointList.size.toString())
             }
         }.start()
     }
@@ -324,7 +334,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 "  xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n"
         var segments = ""
         for (location in points) {
-            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\"></wpt>\n"
+            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\" alt=\"${location.altitude}\"></wpt>\n"
         }
         val footer = "</gpx>"
         val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
@@ -367,6 +377,15 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
+    private fun fromWaypointListToLatLngList (waypointlist: MutableList<Waypoint>): MutableList<LatLng> {
+        val latlngList = mutableListOf<LatLng>()
+        for (point in waypointList)
+        {
+           latlngList.add(LatLng(point.coordinate.latitude, point.coordinate.longitude))
+        }
+        return latlngList
+    }
+
     private fun showRecordedWaypoints (points: MutableList<LatLng>){
         for (point in points)
         {
@@ -375,18 +394,18 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun createWaypointMission(points: MutableList<LatLng>): MutableList<Waypoint> {
+    private fun createWaypointMission(points: MutableList<Waypoint>): MutableList<Waypoint> {
         if (points.isNotEmpty())
         {
             for (location in points) {
-                val waypoint = Waypoint(location.latitude, location.longitude, location.altitude.toFloat())
+                //val waypoint = Waypoint(location.coordinate.latitude, location.coordinate.longitude, location.altitude)
                 if (waypointMissionBuilder == null) {
                     waypointMissionBuilder = WaypointMission.Builder().also { builder ->
-                        waypointList.add(waypoint) // add the waypoint to the list
+                        waypointList.add(location) // add the waypoint to the list
                         builder.waypointList(waypointList).waypointCount(waypointList.size) }
                 } else {
                     waypointMissionBuilder?.let { builder ->
-                        waypointList.add(waypoint)
+                        waypointList.add(location)
                         builder.waypointList(waypointList).waypointCount(waypointList.size) }
                 }
             }
@@ -428,9 +447,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             }
 
             if (builder.waypointList.size > 0) {
-                var averageAltitude = 0.0f
+                /*var averageAltitude = 0.0f
+                for (i in builder.waypointList.indices) { // average altitude
+                    averageAltitude += builder.waypointList[i].altitude }
+                averageAltitude /= builder.waypointList.size*/
+
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
-                    averageAltitude += builder.waypointList[i].altitude
+                    builder.waypointList[i].altitude = 2f
                     builder.waypointList[i].heading = 0
                     builder.waypointList[i].actionRepeatTimes = 1
                     builder.waypointList[i].actionTimeoutInSeconds = 30
@@ -439,7 +462,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     //builder.waypointList[i].addAction(WaypointAction(WaypointActionType.START_TAKE_PHOTO, 0))
                     //builder.waypointList[i].shootPhotoDistanceInterval = 28.956f
                 }
-                setResultToToast("Altitude =" + averageAltitude/builder.waypointList.size)
+                setResultToToast("Altitude set")
             }
             getWaypointMissionOperator()?.let { operator ->
                 val error = operator.loadMission(builder.build()) // load the mission
@@ -476,6 +499,12 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun stopWaypointMission() { // stop mission
         getWaypointMissionOperator()?.stopMission { error ->
+            setResultToToast("Mission Stop: " + if (error == null) "Successfully" else error.description)
+        }
+    }
+
+    private fun forceStopWaypointMission() { // stop mission
+        getWaypointMissionOperator()?.forceStopMission { error ->
             setResultToToast("Mission Stop: " + if (error == null) "Successfully" else error.description)
         }
     }
@@ -644,19 +673,19 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                recordToGPX(recordedCoordinates)
+                recordToGPX(fromWaypointListToLatLngList(recordedwaypointList))
                 //mutableGeoJson = mutableListOf()
-                setResultToToast("Route coordinates:" + recordedCoordinates.size.toString())
+                setResultToToast("Route coordinates:" + recordedwaypointList.size.toString())
             }
             R.id.showTrack -> {
                 //setResultToToast(recordedCoordinates.size.toString())
                 //showTrack(routeCoordinates)
-                createWaypointMission(recordedCoordinates)
-                showRecordedWaypoints(recordedCoordinates)
+                createWaypointMission(recordedwaypointList)
+                showRecordedWaypoints(fromWaypointListToLatLngList(recordedwaypointList))
                 cameraUpdate()
             }
             R.id.clearWaypoints -> {
-                cleanWaypointList(recordedCoordinates)
+                //cleanWaypointList(recordedCoordinates)
             }
 
             R.id.config -> {
@@ -672,6 +701,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
             R.id.stop_mission -> {
                 stopWaypointMission()
+            }
+
+            R.id.forceStop -> {
+                forceStopWaypointMission()
             }
             R.id.btn_capture -> {
                 captureAction()
@@ -777,5 +810,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         uninitPreviewer()
         super.onPause()
     }
+
 
 }

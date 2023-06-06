@@ -94,6 +94,21 @@
             android:textSize="15sp" />
     </LinearLayout>
 
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/forceStop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Force Stop"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
+
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="433dp"

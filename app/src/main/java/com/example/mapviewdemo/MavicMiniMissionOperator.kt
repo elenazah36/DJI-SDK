@@ -173,7 +173,7 @@ class MavicMiniMissionOperator(context: Context) {
 
     //Function used to make the drone takeoff and then begin execution of the current waypoint mission
     fun startMission(callback: CommonCallbacks.CompletionCallback<DJIError>?) {
-        gimbalObserver = Observer {gimbalPitch: Float ->
+        gimbalObserver = Observer { gimbalPitch: Float ->
             if (gimbalPitch == -90f && !isAirborne) {
                 isAirborne = true
                 showToast(mContext, "Starting to Takeoff")
@@ -255,6 +255,7 @@ class MavicMiniMissionOperator(context: Context) {
                 if (waypointTracker >= waypoints.size) return@withContext
                 currentWaypoint = waypoints[waypointTracker] //getting the current waypoint
                 droneLocationLiveData.observe(activity, locationObserver)
+                showToast(mContext, currentWaypoint.altitude.toString())
             }
         }
     }
@@ -267,8 +268,7 @@ class MavicMiniMissionOperator(context: Context) {
             LocationCoordinate2D(
                 currentWaypoint.coordinate.latitude,
                 currentWaypoint.coordinate.longitude,
-
-                ),
+            ),
             LocationCoordinate2D(
                 currentLocation.latitude,
                 currentLocation.longitude
@@ -362,7 +362,6 @@ class MavicMiniMissionOperator(context: Context) {
                         sendDataTimer.cancel()
                         isLanded = true
                     }
-
                 }
                 removeObserver()
             }
@@ -405,17 +404,32 @@ class MavicMiniMissionOperator(context: Context) {
     }
 
 
-
     // Function used to stop the current waypoint mission and land the drone
     fun stopMission(callback: CommonCallbacks.CompletionCallback<DJIMissionError>?) {
         if (!isLanding) {
             showToast(mContext, "trying to land")
         }
-        DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(20){
+        DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(20) {
             DJIDemoApplication.getFlightController()?.startGoHome(callback)
         }
     }
 
+    fun forceStopMission(callback: CommonCallbacks.CompletionCallback<DJIMissionError>?){
+        state = WaypointMissionState.EXECUTION_STOPPING
+        operatorListener?.onExecutionFinish(null)
+        stopMission(null)
+        isLanding = true
+        sendDataTimer.cancel()
+        if (!isLanding)
+            showToast(mContext, "trying to land")
+        if (isLanding && currentWaypoint.altitude == 0f) {
+            if (!isLanded) {
+                sendDataTimer.cancel()
+                isLanded = true
+            }
+        }
+        removeObserver()
+    }
     /*
      * Roll: POSITIVE is SOUTH, NEGATIVE is NORTH, Range: [-30, 30]
      * Pitch: POSITIVE is EAST, NEGATIVE is WEST, Range: [-30, 30]
