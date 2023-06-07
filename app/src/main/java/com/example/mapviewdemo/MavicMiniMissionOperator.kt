@@ -73,6 +73,7 @@ class MavicMiniMissionOperator(context: Context) {
     private var gimbalPitchLiveData: MutableLiveData<Float> = MutableLiveData()
 
     private var distanceToWaypoint = 0.0
+    private var distanceToWaypoint3D = 0.0
     private var photoTakenToggle = false
 
 
@@ -245,6 +246,12 @@ class MavicMiniMissionOperator(context: Context) {
         return sqrt((a.longitude - b.longitude).pow(2.0) + (a.latitude - b.latitude).pow(2.0)) * 111139.0
     }
 
+    private fun distanceInMeters3d(a: LocationCoordinate2D,alt_a: Float, b: LocationCoordinate2D,alt_b: Float): Double {
+        var distance2D = sqrt((a.longitude - b.longitude).pow(2.0) + (a.latitude - b.latitude).pow(2.0)) * 111139.0
+        var distance3D = sqrt((alt_a.toDouble() - alt_b.toDouble()).pow(2.0) + distance2D.pow(2.0))
+        return  distance3D
+    }
+
     //Function used to execute the current waypoint mission
     private fun executeMission() {
         state = WaypointMissionState.EXECUTION_STARTING
@@ -263,17 +270,28 @@ class MavicMiniMissionOperator(context: Context) {
     private val locationObserver = Observer { currentLocation: LocationCoordinate3D ->
         //observing changes to the drone's location coordinates
         state = WaypointMissionState.EXECUTING
-
-        distanceToWaypoint = distanceInMeters(
+        distanceToWaypoint3D = distanceInMeters3d(
             LocationCoordinate2D(
                 currentWaypoint.coordinate.latitude,
                 currentWaypoint.coordinate.longitude,
-            ),
+            ),currentWaypoint.altitude,
             LocationCoordinate2D(
                 currentLocation.latitude,
                 currentLocation.longitude
-            )
+            ),currentLocation.altitude
         )
+//        distanceToWaypoint = distanceInMeters(
+//            LocationCoordinate2D(
+//                currentWaypoint.coordinate.latitude,
+//                currentWaypoint.coordinate.longitude,
+//            ),
+//            LocationCoordinate2D(
+//                currentLocation.latitude,
+//                currentLocation.longitude
+//            )
+//        )
+
+        distanceToWaypoint = distanceToWaypoint3D
         if (!isLanded && !isLanding) {
             //If the drone has arrived at the destination, take a photo.
             if (!photoTakenToggle && (distanceToWaypoint < 1.5)) {//if you haven't taken a photo

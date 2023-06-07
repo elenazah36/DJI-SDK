@@ -389,7 +389,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val mydir: File =
             this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
 //        val mydir: File =
-//            this.getDir(Environment.DIRECTORY_DOWNLOADS+"/Recordings_DJI_ez/", 2) // name:app_Recordings_DJI_ez
+//            this.getDir(Environment.DIRECTORY_DOWNLOADS+"/Recordings_DJI_ez/", 0) // name:app_Recordings_DJI_ez
         if (!mydir.exists()) {
             mydir.mkdirs()
         }
