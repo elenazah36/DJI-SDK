@@ -86,7 +86,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             return latitude > -90 && latitude < 90 && longitude > -180 && longitude < 180 && latitude != 0.0 && longitude != 0.0
         }
     }
-
+    val gpxFolder = "Recordings_DJI/"
     val EARTH_RADIUS_METERS: Double = 6371.0*1000
 
     private var isAdd = false
@@ -349,14 +349,38 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val footer = "</gpx>"
         val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
         val currentDateandTime = sdf.format(Date()).toString() + ".gpx"
-        val mydir: File =
-            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
+//        val mydir: File =
+//            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
+//        if (!mydir.exists()) {
+//            mydir.mkdirs()
+//        }
+//        val fileName = File(mydir, currentDateandTime)
+//        try {
+//            FileOutputStream(fileName).use {
+//                it.write(header.toByteArray())
+//                it.write(segments.toByteArray())
+//                it.write(footer.toByteArray())
+//                it.flush()
+//                it.close()
+//                setResultToToast("GPX file saved")}
+//
+//        } catch (e: IOException) {
+//            e.printStackTrace()
+//        }
+
+        val mydir = File(Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOCUMENTS),
+            "$gpxFolder"
+        )
         if (!mydir.exists()) {
             mydir.mkdirs()
         }
-        val fileName = File(mydir, currentDateandTime)
+        val file = File(Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOCUMENTS),
+            "$gpxFolder$currentDateandTime"
+        )
         try {
-            FileOutputStream(fileName).use {
+            FileOutputStream(file).use {
                 it.write(header.toByteArray())
                 it.write(segments.toByteArray())
                 it.write(footer.toByteArray())
@@ -386,16 +410,40 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val footer = "</gpx>"
         val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
         val currentDateandTime = sdf.format(Date()).toString() + "_yaw.gpx"
-        val mydir: File =
-            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
 //        val mydir: File =
-//            this.getDir(Environment.DIRECTORY_DOWNLOADS+"/Recordings_DJI_ez/", 0) // name:app_Recordings_DJI_ez
+//            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
+////        val mydir: File =
+////            this.getDir(Environment.DIRECTORY_DOWNLOADS+"/Recordings_DJI_ez/", 0) // name:app_Recordings_DJI_ez
+//        if (!mydir.exists()) {
+//            mydir.mkdirs()
+//        }
+
+//        val fileName = File(mydir, currentDateandTime)
+//        try {
+//            FileOutputStream(fileName).use {
+//                it.write(header.toByteArray())
+//                it.write(segments.toByteArray())
+//                it.write(footer.toByteArray())
+//                it.flush()
+//                it.close()
+//                setResultToToast("GPX file saved")}
+//
+//        } catch (e: IOException) {
+//            e.printStackTrace()
+//        }
+        val mydir = File(Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOCUMENTS),
+            "$gpxFolder"
+        )
         if (!mydir.exists()) {
             mydir.mkdirs()
         }
-        val fileName = File(mydir, currentDateandTime)
+        val file = File(Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOCUMENTS),
+            "$gpxFolder$currentDateandTime"
+        )
         try {
-            FileOutputStream(fileName).use {
+            FileOutputStream(file).use {
                 it.write(header.toByteArray())
                 it.write(segments.toByteArray())
                 it.write(footer.toByteArray())
