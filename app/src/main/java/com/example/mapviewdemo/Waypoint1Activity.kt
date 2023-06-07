@@ -3,6 +3,7 @@ package com.example.mapviewdemo
 
 import android.graphics.SurfaceTexture
 import android.os.Bundle
+import android.os.Environment
 import android.view.TextureView
 import android.view.View
 import android.widget.*
@@ -94,14 +95,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private var droneLocationLat: Double = 15.0
     private var droneLocationLng: Double = 15.0
-    private var droneLocationAlt: Float = 10f
+    private var droneLocationAlt: Float = 2f
 
 
     private var droneMarker: Marker? = null
     private val markers: MutableMap<Int, Marker> = ConcurrentHashMap<Int, Marker>()
     private var mapboxMap: MapboxMap? = null
 
-    private var altitude = 10f
+    private var altitude = 2f
     private var speed = 0f
     private var mavicMiniMissionOperator: MavicMiniMissionOperator? = null
 
@@ -256,21 +257,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         // this will initialize the flight controller with predetermined data
 
         // We recommend you use the below settings, a standard american hand style.
-//        if (flightController == null) {
-//                flightController = DJIDemoApplication.getFlightController()
-//        }
-//        flightController?.let { flightController ->
-//            flightController.setStateCallback { flightControllerState ->
-//                // set the latitude and longitude of the drone based on aircraft location
-//                droneLocationLat = flightControllerState.aircraftLocation.latitude
-//                droneLocationLng = flightControllerState.aircraftLocation.longitude
-//                droneLocationAlt = flightControllerState.aircraftLocation.altitude
-//                runOnUiThread {
-//                    mavicMiniMissionOperator?.droneLocationMutableLiveData?.postValue(flightControllerState.aircraftLocation)
-//                    updateDroneLocation() // this will be called on the main thread
-//                }
-//            }
-//        }
         DJIDemoApplication.getFlightController()?.let { flightController ->
             flightController.setStateCallback { flightControllerState ->
                 // set the latitude and longitude of the drone based on aircraft location
@@ -469,7 +455,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 averageAltitude /= builder.waypointList.size*/
 
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
-                    builder.waypointList[i].altitude = 2f
+//                    builder.waypointList[i].altitude = 2f
                     builder.waypointList[i].heading = 0
                     builder.waypointList[i].actionRepeatTimes = 1
                     builder.waypointList[i].actionTimeoutInSeconds = 30

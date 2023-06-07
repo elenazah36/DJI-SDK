@@ -418,16 +418,16 @@ class MavicMiniMissionOperator(context: Context) {
         state = WaypointMissionState.EXECUTION_STOPPING
         operatorListener?.onExecutionFinish(null)
         stopMission(null)
-        isLanding = true
+//        isLanding = true
         sendDataTimer.cancel()
-        if (!isLanding)
-            showToast(mContext, "trying to land")
-        if (isLanding && currentWaypoint.altitude == 0f) {
-            if (!isLanded) {
-                sendDataTimer.cancel()
-                isLanded = true
-            }
-        }
+//        if (!isLanding)
+//            showToast(mContext, "trying to land")
+//        if (isLanding && currentWaypoint.altitude == 0f) {
+//            if (!isLanded) {
+//                sendDataTimer.cancel()
+//                isLanded = true
+//            }
+//        }
         removeObserver()
     }
     /*
