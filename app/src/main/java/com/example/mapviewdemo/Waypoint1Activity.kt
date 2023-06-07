@@ -611,26 +611,49 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         setResultToToast(whetherInternalOrSD.toString())
     }
 
+//    private fun captureAction() {
+//        val camera: Camera = getCameraInstance() ?: return
+//
+//        /*
+//        Setting the camera capture mode to SINGLE, and then taking a photo using the camera.
+//        If the resulting callback for each operation returns an error that is null, then the
+//        two operations are successful.
+//        */
+//        val photoMode = ShootPhotoMode.SINGLE
+//        camera.setShootPhotoMode(photoMode) { djiError ->
+//            if (djiError == null) {
+//                lifecycleScope.launch {
+//                    camera.startShootPhoto { djiErrorSecond ->
+//                        if (djiErrorSecond == null) {
+//                            setResultToToast("take photo: success")
+//                        } else {
+//                            setResultToToast("Take Photo Failure: ${djiError?.description}")
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+
     private fun captureAction() {
-        val camera: Camera = getCameraInstance() ?: return
+        val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
 
         /*
-        Setting the camera capture mode to SINGLE, and then taking a photo using the camera.
-        If the resulting callback for each operation returns an error that is null, then the
-        two operations are successful.
+        starts the camera video recording and receives a callback. If the callback returns an error that
+        is null, the operation is successful.
         */
-        val photoMode = ShootPhotoMode.SINGLE
-        camera.setShootPhotoMode(photoMode) { djiError ->
-            if (djiError == null) {
-                lifecycleScope.launch {
-                    camera.startShootPhoto { djiErrorSecond ->
-                        if (djiErrorSecond == null) {
-                            setResultToToast("take photo: success")
-                        } else {
-                            setResultToToast("Take Photo Failure: ${djiError?.description}")
-                        }
-                    }
-                }
+        camera.startShootPhoto {
+            if (it == null) {
+                setResultToToast("Photo Capture: Success")
+            } else {
+                setResultToToast("Photo Capture Error: ${it.description}")
+            }
+        }
+        camera.stopShootPhoto {
+            if (it == null) {
+                setResultToToast("Photo Capture Stop: Success")
+            } else {
+                setResultToToast("Photo Capture Stop Error: ${it.description}")
             }
         }
     }
