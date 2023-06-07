@@ -6,10 +6,13 @@ import android.os.Bundle
 import android.os.Environment
 import android.view.TextureView
 import android.view.View
-import android.widget.*
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.mapbox.geojson.*
+import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
 import com.mapbox.mapboxsdk.annotations.Marker
@@ -20,16 +23,11 @@ import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
-import com.mapbox.mapboxsdk.style.layers.*
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import dji.common.camera.SettingsDefinitions.CameraMode
 import dji.common.camera.SettingsDefinitions.ShootPhotoMode
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
 import dji.common.product.Model
-import dji.common.util.CommonCallbacks
-import dji.common.util.CommonCallbacks.CompletionCallback
-import dji.midware.util.ContextUtil.getContext
 import dji.sdk.base.BaseProduct
 import dji.sdk.camera.Camera
 import dji.sdk.camera.VideoFeeder
@@ -41,7 +39,9 @@ import dji.sdk.products.Aircraft
 import dji.sdk.products.HandHeld
 import dji.sdk.sdkmanager.DJISDKManager
 import kotlinx.coroutines.launch
-import java.io.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -96,6 +96,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private var droneLocationLat: Double = 15.0
     private var droneLocationLng: Double = 15.0
     private var droneLocationAlt: Float = 2f
+    private var droneOrientation = 0
 
 
     private var droneMarker: Marker? = null
@@ -110,7 +111,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private val recordedwaypointList : MutableList<Waypoint> = mutableListOf()
     private var instance: WaypointMissionOperator? = null
     private var finishedAction = WaypointMissionFinishedAction.NO_ACTION
-    private var headingMode = WaypointMissionHeadingMode.AUTO
+//    private var headingMode = WaypointMissionHeadingMode.AUTO
+    private var headingMode = WaypointMissionHeadingMode.USING_WAYPOINT_HEADING
 
     //private var stringBufferGPS = StringBuffer()
     //private lateinit var mutableGPSList : MutableList<LatLng>
@@ -263,6 +265,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 droneLocationLat = flightControllerState.aircraftLocation.latitude
                 droneLocationLng = flightControllerState.aircraftLocation.longitude
                 droneLocationAlt = flightControllerState.aircraftLocation.altitude
+                droneOrientation = flightControllerState.getAircraftHeadDirection()
                 runOnUiThread {
                     mavicMiniMissionOperator?.droneLocationMutableLiveData?.postValue(flightControllerState.aircraftLocation)
                     updateDroneLocation() // this will be called on the main thread
@@ -278,6 +281,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val sb = StringBuffer()
         val pos = LatLng(droneLocationLat, droneLocationLng, droneLocationAlt.toDouble())
         val wayPt = Waypoint(droneLocationLat, droneLocationLng, droneLocationAlt)
+        wayPt.heading = droneOrientation
         // the following will draw the aircraft on the screen
         val markerOptions = MarkerOptions()
             .position(pos)
@@ -289,6 +293,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 sb.append("Latitude:").append(wayPt.coordinate.latitude).append("\n")
                 sb.append("Longitude:").append(wayPt.coordinate.longitude).append("\n")
                 sb.append("Altitude:").append(wayPt.altitude).append("\n")
+                sb.append("Orientation:").append(wayPt.heading).append("\n")
                 mTextGPS.text = sb.toString()
             }
         }
@@ -304,11 +309,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                             droneLocationLng,
                             droneLocationAlt.toDouble())
                     )*/
-                    recordedwaypointList.add(
-                        Waypoint(droneLocationLat,
-                                droneLocationLng,
-                                droneLocationAlt)
-                    )
+                    val newwayPt = Waypoint(droneLocationLat, droneLocationLng, droneLocationAlt)
+                    newwayPt.heading = droneOrientation
+                    recordedwaypointList.add(newwayPt)
+//                    recordedwaypointList.add(
+//                        Waypoint(droneLocationLat,
+//                                droneLocationLng,
+//                                droneLocationAlt)
+//                    )
                 }
                 Thread.sleep(2000)
                 setResultToToast(recordedwaypointList.size.toString())
@@ -362,6 +370,45 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
 
+    private fun recordToGPXyaw(points: MutableList<Waypoint>){
+        val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<gpx\n" +
+                "  version=\"1.1\"\n" +
+                "  creator=\"Runkeeper - http://www.runkeeper.com\"\n" +
+                "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+                "  xmlns=\"http://www.topografix.com/GPX/1/1\"\n" +
+                "  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"\n" +
+                "  xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n"
+        var segments = ""
+        for (location in points) {
+            segments += "<wpt lat=\"${location.coordinate.latitude}\" lon=\"${location.coordinate.longitude}\" alt=\"${location.altitude}\"  yaw=\"${location.heading}\"></wpt>\n"
+        }
+        val footer = "</gpx>"
+        val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
+        val currentDateandTime = sdf.format(Date()).toString() + "_yaw.gpx"
+        val mydir: File =
+            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
+//        val mydir: File =
+//            this.getDir(Environment.DIRECTORY_DOWNLOADS+"/Recordings_DJI_ez/", 2) // name:app_Recordings_DJI_ez
+        if (!mydir.exists()) {
+            mydir.mkdirs()
+        }
+        val fileName = File(mydir, currentDateandTime)
+        try {
+            FileOutputStream(fileName).use {
+                it.write(header.toByteArray())
+                it.write(segments.toByteArray())
+                it.write(footer.toByteArray())
+                it.flush()
+                it.close()
+                setResultToToast("GPX file saved")}
+
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+
+
     private fun cleanWaypointList (track: MutableList<LatLng>)
     {
         var i = 0
@@ -383,7 +430,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val latlngList = mutableListOf<LatLng>()
         for (point in waypointList)
         {
-           latlngList.add(LatLng(point.coordinate.latitude, point.coordinate.longitude))
+           latlngList.add(LatLng(point.coordinate.latitude, point.coordinate.longitude, point.altitude.toDouble()))
         }
         return latlngList
     }
@@ -422,7 +469,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun configWayPointMission() {
 
-        speed = 3.0f
+        speed = 2.0f
 
         if (waypointMissionBuilder == null) {
             waypointMissionBuilder = WaypointMission.Builder().apply {
@@ -456,7 +503,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
 //                    builder.waypointList[i].altitude = 2f
-                    builder.waypointList[i].heading = 0
+//                    builder.waypointList[i].heading = 0
                     builder.waypointList[i].actionRepeatTimes = 1
                     builder.waypointList[i].actionTimeoutInSeconds = 30
                     builder.waypointList[i].turnMode = WaypointTurnMode.CLOCKWISE
@@ -676,6 +723,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
                 recordToGPX(fromWaypointListToLatLngList(recordedwaypointList))
+                recordToGPXyaw(recordedwaypointList)
                 //mutableGeoJson = mutableListOf()
                 setResultToToast("Route coordinates:" + recordedwaypointList.size.toString())
             }

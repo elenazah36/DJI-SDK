@@ -326,14 +326,14 @@ class MavicMiniMissionOperator(context: Context) {
         }
 
         //when the longitude difference becomes insignificant:
-        if (abs(longitudeDiff) < 0.000002) {
+        if (abs(longitudeDiff) < 0.000001) {
             Log.i(TAG, "finished travelling LONGITUDE")
             directions.pitch = 0f
             travelledLongitude = true
         }
 
 
-        if (abs(latitudeDiff) < 0.000002) {
+        if (abs(latitudeDiff) < 0.000001) {
             Log.i(TAG, "finished travelling LATITUDE")
             directions.roll = 0f
             travelledLatitude = true
@@ -369,9 +369,10 @@ class MavicMiniMissionOperator(context: Context) {
         } else {
             // checking for pause state
             if (state == WaypointMissionState.EXECUTING) {
+                directions.yaw = currentWaypoint.heading.toFloat()
                 directions.altitude = currentWaypoint.altitude
             } else if (state == WaypointMissionState.EXECUTION_PAUSED) {
-                directions = Direction(0f, 0f, 0f, currentWaypoint.altitude)
+                directions = Direction(0f, 0f, currentWaypoint.heading.toFloat(), currentWaypoint.altitude)
             }
             move(directions)
 
@@ -397,7 +398,7 @@ class MavicMiniMissionOperator(context: Context) {
     @SuppressLint("LongLogTag")
     // Function used to move the drone in the provided direction
     private fun move(dir: Direction) {
-        Log.d(TAG, "PITCH: ${dir.pitch}, ROLL: ${dir.roll}, ALT: ${dir.altitude}")
+        Log.d(TAG, "PITCH: ${dir.pitch}, ROLL: ${dir.roll}, YAW: ${dir.yaw}, ALT: ${dir.altitude}")
         sendDataTask =
             SendDataTask(dir.pitch, dir.roll, dir.yaw, dir.altitude)
         sendDataTimer.schedule(sendDataTask, 0, 200)
@@ -406,11 +407,22 @@ class MavicMiniMissionOperator(context: Context) {
 
     // Function used to stop the current waypoint mission and land the drone
     fun stopMission(callback: CommonCallbacks.CompletionCallback<DJIMissionError>?) {
-        if (!isLanding) {
-            showToast(mContext, "trying to land")
-        }
+//        if (!isLanding) {
+//            showToast(mContext, "trying to land")
+//        }
         DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(20) {
             DJIDemoApplication.getFlightController()?.startGoHome(callback)
+        }
+        DJIDemoApplication.getFlightController()?.let { controller ->
+            controller.startLanding { djiError ->
+                if (djiError != null) {
+//                            Log.i(TAG, djiError.description)
+                    showToast(mContext,"Landing Error: ${djiError.description}")
+                } else {
+//                            Log.i(TAG,"Start Landing Success")
+                    showToast(mContext,"Start Landing Success")
+                }
+            }
         }
     }
 
