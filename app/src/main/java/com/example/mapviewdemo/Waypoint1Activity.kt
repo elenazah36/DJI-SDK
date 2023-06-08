@@ -233,7 +233,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap // initialize the map
         mapboxMap.addOnMapClickListener(this)
-        mapboxMap.setStyle(Style.SATELLITE) { // set the view of the map
+        mapboxMap.setStyle(Style.MAPBOX_STREETS) { // set the view of the map
         }
     }
 
@@ -474,7 +474,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
     private fun createWaypointMission(points: MutableList<Waypoint>): MutableList<Waypoint> {
-        if (points.isNotEmpty())
+        if (!points.isNullOrEmpty())
         {
             for (location in points) {
                 //val waypoint = Waypoint(location.coordinate.latitude, location.coordinate.longitude, location.altitude)
@@ -488,9 +488,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                         builder.waypointList(waypointList).waypointCount(waypointList.size) }
                 }
             }
+            if (waypointMissionBuilder != null)
+                setResultToToast("Mission created")
+            else
+                setResultToToast("Failed to create mission")
         }
-        if (waypointMissionBuilder != null)
-            setResultToToast("Mission created")
         else
             setResultToToast("Failed to create mission")
         return waypointList
@@ -540,15 +542,17 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     //builder.waypointList[i].shootPhotoDistanceInterval = 28.956f
                 }
 //                setResultToToast("Altitude set")
-            }
-            getWaypointMissionOperator()?.let { operator ->
-                val error = operator.loadMission(builder.build()) // load the mission
-                if (error == null) {
-                    setResultToToast("loadWaypoint succeeded")
-                } else {
-                    setResultToToast("loadWaypoint failed " + error.description)
+                getWaypointMissionOperator()?.let { operator ->
+                    val error = operator.loadMission(builder.build()) // load the mission
+                    if (error == null) {
+                        setResultToToast("loadWaypoint succeeded")
+                    } else {
+                        setResultToToast("loadWaypoint failed " + error.description)
+                    }
                 }
             }
+            else
+                setResultToToast("loadWaypoint failed, not enough builder")
         }
     }
 
