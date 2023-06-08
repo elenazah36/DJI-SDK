@@ -81,6 +81,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private lateinit var videoSurface: TextureView //Used to display the DJI product's camera video stream
     private lateinit var captureBtn: Button
+    private lateinit var mapStyleBtn: Button
 //    private lateinit var shootPhotoModeBtn: Button
 //    private lateinit var recordVideoModeBtn: Button
     private lateinit var recordBtn: ToggleButton
@@ -186,6 +187,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         force_stop = findViewById(R.id.forceStop)
         startland = findViewById(R.id.btn_startland)
         opengpx = findViewById(R.id.btn_opengpx)
+        mapStyleBtn = findViewById(R.id.btn_mapstyle)
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
@@ -199,6 +201,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         force_stop.setOnClickListener(this)
         startland.setOnClickListener(this)
         opengpx.setOnClickListener(this)
+        mapStyleBtn.setOnClickListener(this)
 
         videoSurface = findViewById(R.id.video_previewer_surface)
 //        recordingTime = findViewById(R.id.timer)
@@ -284,7 +287,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             }
         }
     }
-
 
     private fun updateDroneLocation() { // this will draw the aircraft as it moves
         //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
@@ -647,7 +649,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         Thread.sleep(1000)
         camera.startShootPhoto {
             if (it == null) {
-                setResultToToast("Photo Capture: Success")
+                setResultToToast("Photo taken.")
             } else {
                 setResultToToast("Photo Capture Error: ${it.description}")
             }
@@ -757,6 +759,28 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
+    private fun changeMapStyle(){
+        val style_street = Style.MAPBOX_STREETS
+        val style_sat = Style.SATELLITE
+//                val style_string_sat = "mapbox://styles/mapbox/satellite-v9"
+//                val style_string_street = "mapbox://styles/mapbox/streets-v11"
+        val style_string_sat = "sat"
+        val style_string_street = "street"
+        var style = mapboxMap?.getStyle()?.uri
+//                if (style.toString() == style_string_sat){
+        if (style.toString().contains(style_string_sat)){
+            setResultToToast("Changing style to street")
+            mapboxMap?.setStyle(style_street) { // set the view of the map
+            }
+        }
+        else{
+//                    setResultToToast(style.toString())
+            setResultToToast("Changing style to satellite")
+            mapboxMap?.setStyle(style_sat) { // set the view of the map
+            }
+        }
+    }
+
     override fun onClick(v: View?) {
         when (v?.id) {
             R.id.locate -> { // will draw the drone and move camera to the position of the drone on the map
@@ -828,6 +852,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     .setType("*/*")
                     .setAction(Intent.ACTION_GET_CONTENT)
                 startActivityForResult(Intent.createChooser(intent, "Select a file"), 111)
+            }
+            R.id.btn_mapstyle -> {
+                changeMapStyle()
             }
             R.id.btn_capture -> {
                 captureAction()
