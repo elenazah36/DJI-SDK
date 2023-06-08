@@ -24,12 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-        <Button
-            android:id="@+id/locate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Locate"
-            android:layout_weight="1"/>
+
         <Button
             android:id="@+id/config"
             android:layout_width="match_parent"
@@ -78,12 +73,12 @@
             android:layout_height="wrap_content"
             android:text="Track"
             android:layout_weight="1"/>
-<!--        <Button-->
-<!--            android:id="@+id/clearWaypoints"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="Clear"-->
-<!--            android:layout_weight="1"/>-->
+        <Button
+            android:id="@+id/clearWaypoints"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Clear"
+            android:layout_weight="1"/>
         <TextView
             android:id="@+id/GPSTextView"
             android:layout_width="wrap_content"
@@ -185,7 +180,12 @@
 <!--            android:layout_height="wrap_content"-->
 <!--            android:layout_weight="1"-->
 <!--            android:text="Record Video Mode" />-->
-
+        <Button
+            android:id="@+id/locate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Locate"
+            android:layout_weight="1"/>
         <Button
             android:id="@+id/btn_startland"
             android:layout_width="0dp"
@@ -198,17 +198,25 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Open" />
-
         <TextView
-            android:id="@+id/timer"
+            android:id="@+id/CMode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignTop="@+id/video_previewer_surface"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="23dp"
-            android:layout_weight="1"
+            android:text="CMode"
             android:gravity="center"
-            android:textColor="#ffffff" />
+            android:textColor="#000000"
+            android:textSize="15sp" />
+
+<!--        <TextView-->
+<!--            android:id="@+id/timer"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_alignTop="@+id/video_previewer_surface"-->
+<!--            android:layout_centerHorizontal="true"-->
+<!--            android:layout_marginTop="23dp"-->
+<!--            android:layout_weight="1"-->
+<!--            android:gravity="center"-->
+<!--            android:textColor="#ffffff" />-->
     </LinearLayout>
 
     </LinearLayout>

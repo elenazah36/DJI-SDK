@@ -3,7 +3,6 @@ package com.example.mapviewdemo
 
 import android.content.Intent
 import android.graphics.SurfaceTexture
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.view.TextureView
@@ -28,6 +27,9 @@ import dji.common.camera.SettingsDefinitions.CameraMode
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
 import dji.common.product.Model
+import dji.common.util.CommonCallbacks
+import dji.common.util.CommonCallbacks.CompletionCallbackWith
+import dji.mop.common.PipelineError.callback
 import dji.sdk.base.BaseProduct
 import dji.sdk.camera.Camera
 import dji.sdk.camera.VideoFeeder
@@ -64,7 +66,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var upload: Button
     private lateinit var showTrack : Button
     private lateinit var mTextGPS: TextView
-//    private lateinit var clearWaypoints : Button
+    private lateinit var mTextCMode: TextView
+    private lateinit var clearWaypoints : Button
     private lateinit var start_mission: Button
     private lateinit var stop_mission: Button
     private lateinit var force_stop: Button
@@ -80,7 +83,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //    private lateinit var shootPhotoModeBtn: Button
 //    private lateinit var recordVideoModeBtn: Button
     private lateinit var recordBtn: ToggleButton
-    private lateinit var recordingTime: TextView
+//    private lateinit var recordingTime: TextView
 
     companion object {
         const val TAG = "Waypoint1Activity"
@@ -141,29 +144,29 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             codecManager?.sendDataToDecoder(videoBuffer, size)
         }
 
-        getCameraInstance()?.let { camera ->
-            camera.setSystemStateCallback {
-                it.let { systemState ->
-                    //Getting elapsed video recording time in minutes and seconds, then converting into a time string
-                    val recordTime = systemState.currentVideoRecordingTimeInSeconds
-                    val minutes = (recordTime % 3600) / 60
-                    val seconds = recordTime % 60
-                    val timeString = String.format("%02d:%02d", minutes, seconds)
-
-                    //Accessing the UI thread to update the activity's UI
-                    runOnUiThread {
-                        //If the camera is video recording, display the time string on the recordingTime TextView
-                        recordingTime.text = timeString
-                        if (systemState.isRecording) {
-                            recordingTime.visibility = View.VISIBLE
-
-                        } else {
-                            recordingTime.visibility = View.INVISIBLE
-                        }
-                    }
-                }
-            }
-        }
+//        getCameraInstance()?.let { camera ->
+//            camera.setSystemStateCallback {
+//                it.let { systemState ->
+//                    //Getting elapsed video recording time in minutes and seconds, then converting into a time string
+//                    val recordTime = systemState.currentVideoRecordingTimeInSeconds
+//                    val minutes = (recordTime % 3600) / 60
+//                    val seconds = recordTime % 60
+//                    val timeString = String.format("%02d:%02d", minutes, seconds)
+//
+//                    //Accessing the UI thread to update the activity's UI
+//                    runOnUiThread {
+//                        //If the camera is video recording, display the time string on the recordingTime TextView
+//                        recordingTime.text = timeString
+//                        if (systemState.isRecording) {
+//                            recordingTime.visibility = View.VISIBLE
+//
+//                        } else {
+//                            recordingTime.visibility = View.INVISIBLE
+//                        }
+//                    }
+//                }
+//            }
+//        }
     }
 
 
@@ -174,8 +177,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         config = findViewById(R.id.config)
         upload = findViewById(R.id.upload)
         mTextGPS = findViewById(R.id.GPSTextView)
+        mTextCMode = findViewById(R.id.CMode)
         showTrack = findViewById(R.id.showTrack)
-//        clearWaypoints = findViewById(R.id.clearWaypoints)
+        clearWaypoints = findViewById(R.id.clearWaypoints)
         start_mission = findViewById(R.id.start_mission)
         stop_mission = findViewById(R.id.stop_mission)
         force_stop = findViewById(R.id.forceStop)
@@ -188,7 +192,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         config.setOnClickListener(this)
         upload.setOnClickListener(this)
         showTrack.setOnClickListener(this)
-//        clearWaypoints.setOnClickListener(this)
+        clearWaypoints.setOnClickListener(this)
         start_mission.setOnClickListener(this)
         stop_mission.setOnClickListener(this)
         force_stop.setOnClickListener(this)
@@ -196,7 +200,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         opengpx.setOnClickListener(this)
 
         videoSurface = findViewById(R.id.video_previewer_surface)
-        recordingTime = findViewById(R.id.timer)
+//        recordingTime = findViewById(R.id.timer)
         captureBtn = findViewById(R.id.btn_capture)
         recordBtn = findViewById(R.id.btn_record)
 //        shootPhotoModeBtn = findViewById(R.id.btn_shoot_photo_mode)
@@ -208,7 +212,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //        shootPhotoModeBtn.setOnClickListener(this)
 //        recordVideoModeBtn.setOnClickListener(this)
 
-        recordingTime.visibility = View.INVISIBLE
+//        recordingTime.visibility = View.VISIBLE
 
         recordBtn.setOnCheckedChangeListener { buttonView, isChecked ->
             if (isChecked) {
@@ -225,7 +229,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     override fun onMapReady(mapboxMap: MapboxMap) {
         this.mapboxMap = mapboxMap // initialize the map
         mapboxMap.addOnMapClickListener(this)
-        mapboxMap.setStyle(Style.MAPBOX_STREETS) { // set the view of the map
+        mapboxMap.setStyle(Style.SATELLITE) { // set the view of the map
         }
     }
 
@@ -300,8 +304,26 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 sb.append("Longitude:").append(wayPt.coordinate.longitude).append("\n")
                 sb.append("Altitude:").append(wayPt.altitude).append("\n")
                 sb.append("Orientation:").append(wayPt.heading).append("\n")
-                mTextGPS.text = sb.toString()
             }
+        }
+    }
+
+    private fun updateCameraMode() { // this will draw the aircraft as it moves
+        //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
+        val sbCMode = StringBuffer()
+        val camera = getCameraInstance() ?:return
+        runOnUiThread {
+//                val currentCMode = CommonCallbacks.CompletionCallbackWith<CameraMode>
+                camera.getMode(object : CommonCallbacks.CompletionCallbackWith<CameraMode> {
+                    override fun onSuccess(information: CameraMode) {
+                        var value = information
+                        sbCMode.append(value)
+                        mTextCMode.text = sbCMode.toString()
+                    }
+                    override fun onFailure(djiError: DJIError) {
+                    }
+                })
+
         }
     }
 
@@ -428,6 +450,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             i++
         }
         setResultToToast(track.size.toString())
+        waypointMissionBuilder?.waypointList?.clear()
+        mapboxMap?.removeAnnotations()
     }
 
     private fun fromWaypointListToLatLngList (points: MutableList<Waypoint>): MutableList<LatLng> {
@@ -524,10 +548,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 }
             }
         }
-    }
-
-    private fun clearWaypoints(){
-        waypointMissionBuilder?.waypointList?.clear()
     }
 
     private fun uploadWaypointMission() { // upload the mission
@@ -644,6 +664,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 receivedVideoDataListener?.let {
                     VideoFeeder.getInstance().primaryVideoFeed.addVideoDataListener(it)
                 }
+//                runOnUiThread {
+//                    updateCameraMode()
+//                }
             }
         }
     }
@@ -751,9 +774,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 showRecordedWaypoints(fromWaypointListToLatLngList(recordedwaypointList))
                 cameraUpdate()
             }
-//            R.id.clearWaypoints -> {
-////                cleanWaypointList(recordedCoordinates)
-//            }
+            R.id.clearWaypoints -> {
+                cleanWaypointList(recordedCoordinates)
+            }
 
             R.id.config -> {
                 configWayPointMission()
