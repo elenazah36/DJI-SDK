@@ -1,7 +1,9 @@
 package com.example.mapviewdemo
 
 
+import android.content.Intent
 import android.graphics.SurfaceTexture
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.view.TextureView
@@ -11,7 +13,6 @@ import android.widget.TextView
 import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
@@ -24,7 +25,6 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
 import dji.common.camera.SettingsDefinitions.CameraMode
-import dji.common.camera.SettingsDefinitions.ShootPhotoMode
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
 import dji.common.product.Model
@@ -38,10 +38,13 @@ import dji.sdk.mission.waypoint.WaypointMissionOperatorListener
 import dji.sdk.products.Aircraft
 import dji.sdk.products.HandHeld
 import dji.sdk.sdkmanager.DJISDKManager
-import kotlinx.coroutines.launch
+import io.ticofab.androidgpxparser.parser.GPXParser
+import io.ticofab.androidgpxparser.parser.domain.Gpx
+import org.xmlpull.v1.XmlPullParserException
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -61,11 +64,12 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var upload: Button
     private lateinit var showTrack : Button
     private lateinit var mTextGPS: TextView
-    private lateinit var clearWaypoints : Button
+//    private lateinit var clearWaypoints : Button
     private lateinit var start_mission: Button
     private lateinit var stop_mission: Button
     private lateinit var force_stop: Button
     private lateinit var startland: Button
+    private lateinit var opengpx: Button
 
     //recording
     private var receivedVideoDataListener: VideoFeeder.VideoDataListener? = null
@@ -73,8 +77,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private lateinit var videoSurface: TextureView //Used to display the DJI product's camera video stream
     private lateinit var captureBtn: Button
-    private lateinit var shootPhotoModeBtn: Button
-    private lateinit var recordVideoModeBtn: Button
+//    private lateinit var shootPhotoModeBtn: Button
+//    private lateinit var recordVideoModeBtn: Button
     private lateinit var recordBtn: ToggleButton
     private lateinit var recordingTime: TextView
 
@@ -171,11 +175,12 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         upload = findViewById(R.id.upload)
         mTextGPS = findViewById(R.id.GPSTextView)
         showTrack = findViewById(R.id.showTrack)
-        clearWaypoints = findViewById(R.id.clearWaypoints)
+//        clearWaypoints = findViewById(R.id.clearWaypoints)
         start_mission = findViewById(R.id.start_mission)
         stop_mission = findViewById(R.id.stop_mission)
         force_stop = findViewById(R.id.forceStop)
         startland = findViewById(R.id.btn_startland)
+        opengpx = findViewById(R.id.btn_opengpx)
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
@@ -183,24 +188,25 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         config.setOnClickListener(this)
         upload.setOnClickListener(this)
         showTrack.setOnClickListener(this)
-        clearWaypoints.setOnClickListener(this)
+//        clearWaypoints.setOnClickListener(this)
         start_mission.setOnClickListener(this)
         stop_mission.setOnClickListener(this)
         force_stop.setOnClickListener(this)
         startland.setOnClickListener(this)
+        opengpx.setOnClickListener(this)
 
         videoSurface = findViewById(R.id.video_previewer_surface)
         recordingTime = findViewById(R.id.timer)
         captureBtn = findViewById(R.id.btn_capture)
         recordBtn = findViewById(R.id.btn_record)
-        shootPhotoModeBtn = findViewById(R.id.btn_shoot_photo_mode)
-        recordVideoModeBtn = findViewById(R.id.btn_record_video_mode)
+//        shootPhotoModeBtn = findViewById(R.id.btn_shoot_photo_mode)
+//        recordVideoModeBtn = findViewById(R.id.btn_record_video_mode)
 
         videoSurface.surfaceTextureListener = this
 
         captureBtn.setOnClickListener(this)
-        shootPhotoModeBtn.setOnClickListener(this)
-        recordVideoModeBtn.setOnClickListener(this)
+//        shootPhotoModeBtn.setOnClickListener(this)
+//        recordVideoModeBtn.setOnClickListener(this)
 
         recordingTime.visibility = View.INVISIBLE
 
@@ -312,11 +318,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     val newwayPt = Waypoint(droneLocationLat, droneLocationLng, droneLocationAlt)
                     newwayPt.heading = droneOrientation
                     recordedwaypointList.add(newwayPt)
-//                    recordedwaypointList.add(
-//                        Waypoint(droneLocationLat,
-//                                droneLocationLng,
-//                                droneLocationAlt)
-//                    )
                 }
                 Thread.sleep(2000)
                 setResultToToast(recordedwaypointList.size.toString())
@@ -324,50 +325,26 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }.start()
     }
 
-    /*private fun initializeWaypointList(){
-        recordedCoordinates = mutableListOf()
-        recordedCoordinates.add(LatLng(33.685699, 45.522585, 2.0))
-        recordedCoordinates.add(LatLng(33.708873, 45.534611, 2.0))
-        recordedCoordinates.add(LatLng(33.678833, 45.530883, 2.0))
-        recordedCoordinates.add(LatLng(33.667503, 45.547115, 2.0))
-    }*/
-
-
     private fun recordToGPX(points: MutableList<LatLng>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<gpx\n" +
+                "<gpx" +
                 "  version=\"1.1\"\n" +
-                "  creator=\"Runkeeper - http://www.runkeeper.com\"\n" +
+                "  creator=\"VinEye - UTCN\"\n" //+
                 "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
                 "  xmlns=\"http://www.topografix.com/GPX/1/1\"\n" +
                 "  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"\n" +
                 "  xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n"
         var segments = ""
+        val gpxdate = SimpleDateFormat("yyyy-MM-dd")
+        val gpxcurrentDate = gpxdate.format(Date()).toString()
+        val gpxtime = SimpleDateFormat("hh:mm:ss")
+        val gpxcurrentTime = gpxtime.format(Date()).toString()
         for (location in points) {
-            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\" alt=\"${location.altitude}\"></wpt>\n"
+            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\"><ele>${location.altitude}</ele><time>${gpxcurrentDate}T${gpxcurrentTime}Z</time><desc>0</desc></wpt>\n"
         }
         val footer = "</gpx>"
         val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
         val currentDateandTime = sdf.format(Date()).toString() + ".gpx"
-//        val mydir: File =
-//            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
-//        if (!mydir.exists()) {
-//            mydir.mkdirs()
-//        }
-//        val fileName = File(mydir, currentDateandTime)
-//        try {
-//            FileOutputStream(fileName).use {
-//                it.write(header.toByteArray())
-//                it.write(segments.toByteArray())
-//                it.write(footer.toByteArray())
-//                it.flush()
-//                it.close()
-//                setResultToToast("GPX file saved")}
-//
-//        } catch (e: IOException) {
-//            e.printStackTrace()
-//        }
-
         val mydir = File(Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOCUMENTS),
             "$gpxFolder"
@@ -392,45 +369,26 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             e.printStackTrace()
         }
     }
-
 
     private fun recordToGPXyaw(points: MutableList<Waypoint>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<gpx\n" +
                 "  version=\"1.1\"\n" +
-                "  creator=\"Runkeeper - http://www.runkeeper.com\"\n" +
+                "  creator=\"VinEye - UTCN - http://www.rocon.utcluj.ro\"\n" +
                 "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
                 "  xmlns=\"http://www.topografix.com/GPX/1/1\"\n" +
                 "  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"\n" +
                 "  xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n"
         var segments = ""
+        val gpxdate = SimpleDateFormat("yyyy-MM-dd")
+        val gpxcurrentDate = gpxdate.format(Date()).toString()
+        val gpxtime = SimpleDateFormat("hh:mm:ss")
+        val gpxcurrentTime = gpxtime.format(Date()).toString()
         for (location in points) {
-            segments += "<wpt lat=\"${location.coordinate.latitude}\" lon=\"${location.coordinate.longitude}\" alt=\"${location.altitude}\"  yaw=\"${location.heading}\"></wpt>\n"
-        }
+            segments += "<wpt lat=\"${location.coordinate.latitude}\" lon=\"${location.coordinate.longitude}\"><ele>${location.altitude}</ele><time>${gpxcurrentDate}T${gpxcurrentTime}Z</time><desc>${location.heading}</desc></wpt>\n"        }
         val footer = "</gpx>"
         val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
         val currentDateandTime = sdf.format(Date()).toString() + "_yaw.gpx"
-//        val mydir: File =
-//            this.getDir("Recordings_DJI_ez", MODE_PRIVATE) // name:app_Recordings_DJI_ez
-////        val mydir: File =
-////            this.getDir(Environment.DIRECTORY_DOWNLOADS+"/Recordings_DJI_ez/", 0) // name:app_Recordings_DJI_ez
-//        if (!mydir.exists()) {
-//            mydir.mkdirs()
-//        }
-
-//        val fileName = File(mydir, currentDateandTime)
-//        try {
-//            FileOutputStream(fileName).use {
-//                it.write(header.toByteArray())
-//                it.write(segments.toByteArray())
-//                it.write(footer.toByteArray())
-//                it.flush()
-//                it.close()
-//                setResultToToast("GPX file saved")}
-//
-//        } catch (e: IOException) {
-//            e.printStackTrace()
-//        }
         val mydir = File(Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOCUMENTS),
             "$gpxFolder"
@@ -449,16 +407,15 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 it.write(footer.toByteArray())
                 it.flush()
                 it.close()
-                setResultToToast("GPX file saved")}
-
+                setResultToToast("GPX file saved with yaw")}
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
 
-
     private fun cleanWaypointList (track: MutableList<LatLng>)
     {
+        recordedwaypointList.clear()
         var i = 0
         while (i < track.size -1)
         {
@@ -473,10 +430,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         setResultToToast(track.size.toString())
     }
 
-
-    private fun fromWaypointListToLatLngList (waypointlist: MutableList<Waypoint>): MutableList<LatLng> {
+    private fun fromWaypointListToLatLngList (points: MutableList<Waypoint>): MutableList<LatLng> {
         val latlngList = mutableListOf<LatLng>()
-        for (point in waypointList)
+        for (point in points)
         {
            latlngList.add(LatLng(point.coordinate.latitude, point.coordinate.longitude, point.altitude.toDouble()))
         }
@@ -517,7 +473,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     private fun configWayPointMission() {
 
-        speed = 2.0f
+        speed = 1.0f
 
         if (waypointMissionBuilder == null) {
             waypointMissionBuilder = WaypointMission.Builder().apply {
@@ -542,13 +498,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY)
                 isGimbalPitchRotationEnabled = true
             }
-
             if (builder.waypointList.size > 0) {
                 /*var averageAltitude = 0.0f
                 for (i in builder.waypointList.indices) { // average altitude
                     averageAltitude += builder.waypointList[i].altitude }
                 averageAltitude /= builder.waypointList.size*/
-
                 for (i in builder.waypointList.indices) { // set the altitude of all waypoints to the user defined altitude
 //                    builder.waypointList[i].altitude = 2f
 //                    builder.waypointList[i].heading = 0
@@ -559,7 +513,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     //builder.waypointList[i].addAction(WaypointAction(WaypointActionType.START_TAKE_PHOTO, 0))
                     //builder.waypointList[i].shootPhotoDistanceInterval = 28.956f
                 }
-                setResultToToast("Altitude set")
+//                setResultToToast("Altitude set")
             }
             getWaypointMissionOperator()?.let { operator ->
                 val error = operator.loadMission(builder.build()) // load the mission
@@ -606,10 +560,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-
-
     /* ---------------------- Camera Recording --------------------- */
-
     private fun cameraUpdate() { // update where you're looking on the map
         if (droneLocationLat.isNaN() || droneLocationLng.isNaN())  { return }
         val pos = LatLng(droneLocationLat, droneLocationLng)
@@ -617,7 +568,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val cameraUpdate = CameraUpdateFactory.newLatLngZoom(pos, zoomLevel)
         mapboxMap?.moveCamera(cameraUpdate)
     }
-
 
     private fun startRecord() {
         val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
@@ -652,37 +602,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun storageLocation()
-    {
-        val camera = getCameraInstance() ?: return
-         val whetherInternalOrSD = camera.isInternalStorageSupported
-        setResultToToast(whetherInternalOrSD.toString())
-    }
-
-//    private fun captureAction() {
-//        val camera: Camera = getCameraInstance() ?: return
-//
-//        /*
-//        Setting the camera capture mode to SINGLE, and then taking a photo using the camera.
-//        If the resulting callback for each operation returns an error that is null, then the
-//        two operations are successful.
-//        */
-//        val photoMode = ShootPhotoMode.SINGLE
-//        camera.setShootPhotoMode(photoMode) { djiError ->
-//            if (djiError == null) {
-//                lifecycleScope.launch {
-//                    camera.startShootPhoto { djiErrorSecond ->
-//                        if (djiErrorSecond == null) {
-//                            setResultToToast("take photo: success")
-//                        } else {
-//                            setResultToToast("Take Photo Failure: ${djiError?.description}")
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     private fun captureAction() {
         val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
 
@@ -692,35 +611,18 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         */
         camera.startShootPhoto {
             if (it == null) {
-                setResultToToast("Photo Capture: Success")
+//                setResultToToast("Photo Capture: Success")
             } else {
                 setResultToToast("Photo Capture Error: ${it.description}")
             }
         }
         camera.stopShootPhoto {
             if (it == null) {
-                setResultToToast("Photo Capture Stop: Success")
+//                setResultToToast("Photo Capture Stop: Success")
             } else {
                 setResultToToast("Photo Capture Stop Error: ${it.description}")
             }
         }
-    }
-
-    /*
-    Function for setting the camera mode. If the resulting callback returns an error that
-    is null, then the operation was successful.
-    */
-    private fun switchCameraMode(cameraMode: CameraMode) {
-        val camera: Camera = getCameraInstance() ?: return
-
-        camera.setMode(cameraMode) { error ->
-            if (error == null) {
-                setResultToToast("Switch Camera Mode Succeeded")
-            } else {
-                setResultToToast("Switch Camera Error: ${error.description}")
-            }
-        }
-
     }
 
     //Function that initializes the display for the videoSurface TextureView
@@ -750,7 +652,6 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         val camera: Camera = getCameraInstance() ?: return
     }
 
-
     //When a TextureView's SurfaceTexture is ready for use, use it to initialize the codecManager
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
         if (codecManager == null) {
@@ -771,6 +672,51 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     //When a SurfaceTexture is updated...
     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == 111 && resultCode == RESULT_OK) {
+            val selectedFile = data?.data // The URI with the location of the file
+            var gpxfile = File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS),
+                "$gpxFolder"
+            )
+            if (selectedFile != null) {
+                val filename = selectedFile.path?.substring(selectedFile.path!!.lastIndexOf('/') + 1)
+                gpxfile = File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOCUMENTS),
+                    "$gpxFolder$filename"
+                )
+            }
+            val parser = GPXParser() // consider injection
+            try {
+                val inputStream: InputStream = File(gpxfile.path).inputStream()
+                val parsedGpx: Gpx? = parser.parse(inputStream) // consider using a background thread
+                recordedwaypointList.clear()
+                parsedGpx?.let {
+                    // do something with the parsed track
+                    // see included example app and tests
+                    var readwaypointList =it.wayPoints
+                    for (i in readwaypointList.indices){
+                        val wp =  readwaypointList.get(i)
+                        val newwayPt = Waypoint(wp.latitude, wp.longitude, wp.elevation.toFloat())
+                        newwayPt.heading = wp.desc.toInt()
+                        recordedwaypointList.add(newwayPt)
+                    }
+                } ?: {
+                    setResultToToast("Error at parsing")
+                }
+            } catch (e: IOException) {
+                // do something with this exception
+                e.message?.let { setResultToToast(it) }
+                e.printStackTrace()
+            } catch (e: XmlPullParserException) {
+                // do something with this exception
+                e.message?.let { setResultToToast(it) }
+                e.printStackTrace()
+            }
+        }
+    }
 
     override fun onClick(v: View?) {
         when (v?.id) {
@@ -793,7 +739,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 //val copyingStrignBufferGPS = stringBufferGPS
                 //saveLogFile(copyingStrignBufferGPS)
                 //stringBufferGPS = StringBuffer()
-                recordToGPX(fromWaypointListToLatLngList(recordedwaypointList))
+//                recordToGPX(fromWaypointListToLatLngList(recordedwaypointList))
                 recordToGPXyaw(recordedwaypointList)
                 //mutableGeoJson = mutableListOf()
                 setResultToToast("Route coordinates:" + recordedwaypointList.size.toString())
@@ -805,9 +751,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 showRecordedWaypoints(fromWaypointListToLatLngList(recordedwaypointList))
                 cameraUpdate()
             }
-            R.id.clearWaypoints -> {
-                //cleanWaypointList(recordedCoordinates)
-            }
+//            R.id.clearWaypoints -> {
+////                cleanWaypointList(recordedCoordinates)
+//            }
 
             R.id.config -> {
                 configWayPointMission()
@@ -828,34 +774,27 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 forceStopWaypointMission()
             }
             R.id.btn_startland -> {
-//                forceStopWaypointMission()
                 DJIDemoApplication.getFlightController()?.let { controller ->
                     controller.startLanding { djiError ->
                         if (djiError != null) {
-//                            Log.i(TAG, djiError.description)
                             setResultToToast("Landing Error: ${djiError.description}")
                         } else {
-//                            Log.i(TAG,"Start Landing Success")
                             setResultToToast("Start Landing Success")
                         }
                     }
                 }
             }
-
+            R.id.btn_opengpx -> {
+                val intent = Intent()
+                    .setType("*/*")
+                    .setAction(Intent.ACTION_GET_CONTENT)
+                startActivityForResult(Intent.createChooser(intent, "Select a file"), 111)
+            }
             R.id.btn_capture -> {
                 captureAction()
             }
-            //If the shoot photo mode button is pressed, set camera to only take photos
-            R.id.btn_shoot_photo_mode -> {
-                switchCameraMode(CameraMode.SHOOT_PHOTO)
-            }
-            //If the record video mode button is pressed, set camera to only record videos
-            R.id.btn_record_video_mode -> {
-                switchCameraMode(CameraMode.RECORD_VIDEO)
-            }
         }
     }
-
 
     private fun setResultToToast(string: String) {
         runOnUiThread { Toast.makeText(this, string, Toast.LENGTH_SHORT).show() }

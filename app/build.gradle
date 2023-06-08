@@ -5,6 +5,7 @@ plugins {
 
 repositories {
     mavenLocal()
+    maven { url 'https://jitpack.io' }
 }
 
 android {
@@ -122,6 +123,7 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    implementation 'com.github.ticofab:android-gpx-parser:2.3.1'
 
     //apply from : "https://terra-1-g.djicdn.com/71a7d383e71a4fb8887a310eb746b47f/msdk/Android-CommonConfig/config_sample_all.gradle"
 }

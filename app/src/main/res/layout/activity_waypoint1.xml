@@ -78,12 +78,12 @@
             android:layout_height="wrap_content"
             android:text="Track"
             android:layout_weight="1"/>
-        <Button
-            android:id="@+id/clearWaypoints"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Clear"
-            android:layout_weight="1"/>
+<!--        <Button-->
+<!--            android:id="@+id/clearWaypoints"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Clear"-->
+<!--            android:layout_weight="1"/>-->
         <TextView
             android:id="@+id/GPSTextView"
             android:layout_width="wrap_content"
@@ -171,20 +171,20 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal" >
 
-        <Button
-            android:id="@+id/btn_shoot_photo_mode"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Shoot Photo Mode"
-            android:textSize="12sp" />
+<!--        <Button-->
+<!--            android:id="@+id/btn_shoot_photo_mode"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:text="Shoot Photo Mode"-->
+<!--            android:textSize="12sp" />-->
 
-        <Button
-            android:id="@+id/btn_record_video_mode"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Record Video Mode" />
+<!--        <Button-->
+<!--            android:id="@+id/btn_record_video_mode"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:text="Record Video Mode" />-->
 
         <Button
             android:id="@+id/btn_startland"
@@ -192,6 +192,12 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="LAND" />
+        <Button
+            android:id="@+id/btn_opengpx"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Open" />
 
         <TextView
             android:id="@+id/timer"
