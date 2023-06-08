@@ -23,6 +23,7 @@ import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
+import dji.common.camera.SettingsDefinitions
 import dji.common.camera.SettingsDefinitions.CameraMode
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
@@ -66,7 +67,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private lateinit var upload: Button
     private lateinit var showTrack : Button
     private lateinit var mTextGPS: TextView
-    private lateinit var mTextCMode: TextView
+//    private lateinit var mTextCMode: TextView
     private lateinit var clearWaypoints : Button
     private lateinit var start_mission: Button
     private lateinit var stop_mission: Button
@@ -177,7 +178,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         config = findViewById(R.id.config)
         upload = findViewById(R.id.upload)
         mTextGPS = findViewById(R.id.GPSTextView)
-        mTextCMode = findViewById(R.id.CMode)
+//        mTextCMode = findViewById(R.id.CMode)
         showTrack = findViewById(R.id.showTrack)
         clearWaypoints = findViewById(R.id.clearWaypoints)
         start_mission = findViewById(R.id.start_mission)
@@ -308,24 +309,23 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
-    private fun updateCameraMode() { // this will draw the aircraft as it moves
-        //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
-        val sbCMode = StringBuffer()
-        val camera = getCameraInstance() ?:return
-        runOnUiThread {
-//                val currentCMode = CommonCallbacks.CompletionCallbackWith<CameraMode>
-                camera.getMode(object : CommonCallbacks.CompletionCallbackWith<CameraMode> {
-                    override fun onSuccess(information: CameraMode) {
-                        var value = information
-                        sbCMode.append(value)
-                        mTextCMode.text = sbCMode.toString()
-                    }
-                    override fun onFailure(djiError: DJIError) {
-                    }
-                })
-
-        }
-    }
+//    private fun updateCameraMode() { // this will draw the aircraft as it moves
+//        //Log.i(TAG, "Drone Lat: $droneLocationLat - Drone Lng: $droneLocationLng")
+//        val sbCMode = StringBuffer()
+//        val camera = getCameraInstance() ?:return
+//        runOnUiThread {
+//                camera.getMode(object : CommonCallbacks.CompletionCallbackWith<CameraMode> {
+//                    override fun onSuccess(information: CameraMode) {
+//                        var value = information
+//                        sbCMode.append(value)
+//                        mTextCMode.text = sbCMode.toString()
+//                    }
+//                    override fun onFailure(djiError: DJIError) {
+//                    }
+//                })
+//
+//        }
+//    }
 
     private fun recordLocation() {
         Thread {
@@ -596,6 +596,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         starts the camera video recording and receives a callback. If the callback returns an error that
         is null, the operation is successful.
         */
+        camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
+            if (error == null) {
+//                setResultToToast("Switch Camera Mode Succeeded")
+            } else {
+                setResultToToast("Switch Camera Error: ${error.description}")
+            }
+        }
+        Thread.sleep(1000)
         camera.startRecordVideo {
             if (it == null) {
                 setResultToToast("Record Video: Success")
@@ -629,20 +637,28 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         starts the camera video recording and receives a callback. If the callback returns an error that
         is null, the operation is successful.
         */
+        camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
+            if (error == null) {
+//                setResultToToast("Switch Camera Mode Succeeded")
+            } else {
+                setResultToToast("Switch Camera Error: ${error.description}")
+            }
+        }
+        Thread.sleep(1000)
         camera.startShootPhoto {
             if (it == null) {
-//                setResultToToast("Photo Capture: Success")
+                setResultToToast("Photo Capture: Success")
             } else {
                 setResultToToast("Photo Capture Error: ${it.description}")
             }
         }
-        camera.stopShootPhoto {
-            if (it == null) {
-//                setResultToToast("Photo Capture Stop: Success")
-            } else {
-                setResultToToast("Photo Capture Stop Error: ${it.description}")
-            }
-        }
+//        camera.stopShootPhoto {
+//            if (it == null) {
+////                setResultToToast("Photo Capture Stop: Success")
+//            } else {
+//                setResultToToast("Photo Capture Stop Error: ${it.description}")
+//            }
+//        }
     }
 
     //Function that initializes the display for the videoSurface TextureView

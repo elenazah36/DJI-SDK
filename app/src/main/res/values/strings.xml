@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Map View Demo</string>
+    <string name="app_name">VinEye Waypoint Follower</string>
     <string name="action_settings">Settings</string>
     <string name="disconnected">Disconnected</string>
     <string name="product_information">Product Information</string>
