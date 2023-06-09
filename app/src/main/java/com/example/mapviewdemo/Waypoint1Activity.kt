@@ -25,6 +25,7 @@ import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
 import dji.common.camera.SettingsDefinitions
 import dji.common.camera.SettingsDefinitions.CameraMode
+import dji.common.camera.SettingsDefinitions.FlatCameraMode
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
 import dji.common.product.Model
@@ -602,14 +603,28 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         starts the camera video recording and receives a callback. If the callback returns an error that
         is null, the operation is successful.
         */
-        camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
-            if (error == null) {
-//                setResultToToast("Switch Camera Mode Succeeded")
-            } else {
-                setResultToToast("Switch Camera Error: ${error.description}")
+        var currentCMode = SettingsDefinitions.FlatCameraMode.UNKNOWN
+        camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
+                    override fun onSuccess(information: FlatCameraMode) {
+                        currentCMode = information
+//                        setResultToToast("Camera Mode $information")
+                    }
+                    override fun onFailure(djiError: DJIError) {
+                    }
+                })
+        Thread.sleep(50)
+//        setResultToToast("Camera Mode $currentCMode")
+        if (currentCMode!=SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL){
+            camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
+                if (error == null) {
+    //                setResultToToast("Switch Camera Mode Succeeded")
+                } else {
+                    setResultToToast("Switch Camera Error: ${error.description}")
+                }
             }
+            Thread.sleep(500)
         }
-        Thread.sleep(1000)
+
         camera.startRecordVideo {
             if (it == null) {
                 setResultToToast("Record Video: Success")
@@ -643,14 +658,27 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         starts the camera video recording and receives a callback. If the callback returns an error that
         is null, the operation is successful.
         */
-        camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
-            if (error == null) {
-//                setResultToToast("Switch Camera Mode Succeeded")
-            } else {
-                setResultToToast("Switch Camera Error: ${error.description}")
+        var currentCMode = SettingsDefinitions.FlatCameraMode.UNKNOWN
+        camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
+            override fun onSuccess(information: FlatCameraMode) {
+                currentCMode = information
+//                        setResultToToast("Camera Mode $information")
             }
+            override fun onFailure(djiError: DJIError) {
+            }
+        })
+        Thread.sleep(50)
+        if(currentCMode!=SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
+            camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
+                if (error == null) {
+//                setResultToToast("Switch Camera Mode Succeeded")
+                } else {
+                    setResultToToast("Switch Camera Error: ${error.description}")
+                }
+            }
+            Thread.sleep(500)
         }
-        Thread.sleep(1000)
+
         camera.startShootPhoto {
             if (it == null) {
                 setResultToToast("Photo taken.")
