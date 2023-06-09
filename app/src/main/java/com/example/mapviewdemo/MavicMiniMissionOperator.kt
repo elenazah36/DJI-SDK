@@ -173,9 +173,9 @@ class MavicMiniMissionOperator(context: Context) {
     }
 
     //Function used to make the drone takeoff and then begin execution of the current waypoint mission
-    fun startMission(callback: CommonCallbacks.CompletionCallback<DJIError>?) {
+    fun startMission(angle:Float,callback: CommonCallbacks.CompletionCallback<DJIError>?) {
         gimbalObserver = Observer { gimbalPitch: Float ->
-            if (gimbalPitch == -90f && !isAirborne) {
+            if (gimbalPitch == angle && !isAirborne) {
                 isAirborne = true
                 showToast(mContext, "Starting to Takeoff")
                 Log.d(TAG, "startMission: Start take off")
@@ -184,13 +184,13 @@ class MavicMiniMissionOperator(context: Context) {
                         callback?.onResult(null)
                         this.state = WaypointMissionState.READY_TO_EXECUTE
 
-                        getCameraInstance()?.setMode(SettingsDefinitions.CameraMode.SHOOT_PHOTO) { error ->
-                            if (error == null) {
-                                showToast(mContext, "Switch Camera Mode Succeeded")
-                            } else {
-                                showToast(mContext, "Switch Camera Error: ${error.description}")
-                            }
-                        }
+//                        getCameraInstance()?.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
+//                            if (error == null) {
+//                                showToast(mContext, "Switch Camera Mode Succeeded")
+//                            } else {
+//                                showToast(mContext, "Switch Camera Error: ${error.description}")
+//                            }
+//                        }
 
                         val handler = Handler(Looper.getMainLooper())
                         handler.postDelayed({
@@ -203,7 +203,8 @@ class MavicMiniMissionOperator(context: Context) {
             }
         }
         if (this.state == WaypointMissionState.READY_TO_START) {
-            rotateGimbalDown()
+//            rotateGimbalDown()
+            rotateGimbal(angle)
             gimbalObserver?.let {
                 gimbalPitchLiveData.observe(activity, it)
             }
@@ -223,6 +224,28 @@ class MavicMiniMissionOperator(context: Context) {
                 if (djiError == null) {
                     Log.d(TAG, "rotate gimbal success")
                     showToast(mContext, "rotate gimbal success")
+
+                } else {
+                    Log.d(TAG, "rotate gimbal error " + djiError.description)
+                    showToast(mContext, djiError.description)
+                }
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Drone is likely not connected")
+        }
+    }
+
+    fun rotateGimbal(angle: Float) {
+        val rotation = Rotation.Builder().mode(RotationMode.ABSOLUTE_ANGLE).pitch(angle).build()
+        try {
+            val gimbal = DJIDemoApplication.getGimbal()
+
+            gimbal?.rotate(
+                rotation
+            ) { djiError ->
+                if (djiError == null) {
+                    Log.d(TAG, "rotate gimbal success")
+//                    showToast(mContext, "rotate gimbal success")
 
                 } else {
                     Log.d(TAG, "rotate gimbal error " + djiError.description)

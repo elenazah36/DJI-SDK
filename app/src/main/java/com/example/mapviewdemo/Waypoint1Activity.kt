@@ -7,11 +7,10 @@ import android.os.Bundle
 import android.os.Environment
 import android.view.TextureView
 import android.view.View
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-import android.widget.ToggleButton
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.slider.LabelFormatter
+import com.google.android.material.slider.Slider
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.annotations.IconFactory
@@ -87,6 +86,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //    private lateinit var recordVideoModeBtn: Button
     private lateinit var recordBtn: ToggleButton
 //    private lateinit var recordingTime: TextView
+    private lateinit var gimbalBtn: Slider
 
     companion object {
         const val TAG = "Waypoint1Activity"
@@ -129,6 +129,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private var mutableGeoJson : MutableList<Point> = mutableListOf()
     private var routeCoordinates : MutableList<Point> = mutableListOf()
     private var recordedCoordinates: MutableList<LatLng> = mutableListOf()
+    private var gimbalAngle: Float = 0f
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -189,6 +190,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         startland = findViewById(R.id.btn_startland)
         opengpx = findViewById(R.id.btn_opengpx)
         mapStyleBtn = findViewById(R.id.btn_mapstyle)
+        gimbalBtn = findViewById(R.id.btn_gimbal)
+        gimbalBtn.value = 0f
 
         locate.setOnClickListener(this)
         start.setOnClickListener(this)
@@ -203,6 +206,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         startland.setOnClickListener(this)
         opengpx.setOnClickListener(this)
         mapStyleBtn.setOnClickListener(this)
+        gimbalBtn.addOnChangeListener{ slider, value, fromUser ->
+            changeGimbalAngle()
+        }
 
         videoSurface = findViewById(R.id.video_previewer_surface)
 //        recordingTime = findViewById(R.id.timer)
@@ -538,7 +544,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     builder.waypointList[i].actionRepeatTimes = 1
                     builder.waypointList[i].actionTimeoutInSeconds = 30
                     builder.waypointList[i].turnMode = WaypointTurnMode.CLOCKWISE
-                    builder.waypointList[i].addAction(WaypointAction(WaypointActionType.GIMBAL_PITCH, -90))
+//                    builder.waypointList[i].addAction(WaypointAction(WaypointActionType.GIMBAL_PITCH, -90))
                     //builder.waypointList[i].addAction(WaypointAction(WaypointActionType.START_TAKE_PHOTO, 0))
                     //builder.waypointList[i].shootPhotoDistanceInterval = 28.956f
                 }
@@ -570,7 +576,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
     private fun startWaypointMission() { // start mission
-        getWaypointMissionOperator()?.startMission { error ->
+        val angle = gimbalBtn.value
+        getWaypointMissionOperator()?.startMission(angle) {error ->
             setResultToToast("Mission Start: " + if (error == null) "Successfully" else error.description)
         }
     }
@@ -612,7 +619,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     override fun onFailure(djiError: DJIError) {
                     }
                 })
-        Thread.sleep(50)
+        Thread.sleep(10)
 //        setResultToToast("Camera Mode $currentCMode")
         if (currentCMode!=SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL){
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
@@ -667,7 +674,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             override fun onFailure(djiError: DJIError) {
             }
         })
-        Thread.sleep(50)
+        Thread.sleep(10)
         if(currentCMode!=SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
                 if (error == null) {
@@ -811,6 +818,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             mapboxMap?.setStyle(style_sat) { // set the view of the map
             }
         }
+    }
+
+    private fun changeGimbalAngle(){
+        gimbalBtn.requestFocus()
+        gimbalAngle = gimbalBtn.value
+//        setResultToToast("New gimbal angle set: $gimbalAngle")
+        getWaypointMissionOperator()?.rotateGimbal(gimbalAngle)
     }
 
     override fun onClick(v: View?) {

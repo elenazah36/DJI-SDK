@@ -163,13 +163,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
-
+            <com.google.android.material.slider.Slider
+                android:id="@+id/btn_gimbal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:valueFrom="-90.0"
+                android:valueTo="0.0"
+                android:stepSize="1.0"
+                />
             <Button
                 android:id="@+id/btn_capture"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Take Photo"
+                android:text="Photo"
                 android:textSize="12sp" />
 
             <ToggleButton
@@ -178,9 +186,9 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:checked="false"
-                android:text="Start Record"
-                android:textOff="Start Record"
-                android:textOn="Stop Record"
+                android:text="Video"
+                android:textOff="Record"
+                android:textOn="Recording"
                 android:textSize="20dp" />
         </LinearLayout>
 
