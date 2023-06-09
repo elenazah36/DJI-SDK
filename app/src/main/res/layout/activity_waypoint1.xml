@@ -129,12 +129,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-        <Button
-            android:id="@+id/forceStop"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Force Stop"
-            android:layout_weight="1"/>
+
         <Button
             android:id="@+id/start_mission"
             android:layout_width="match_parent"
@@ -142,11 +137,17 @@
             android:text="GO"
             android:layout_weight="1"/>
         <Button
-            android:id="@+id/stop_mission"
+            android:id="@+id/forceStop"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="END"
-            android:layout_weight="1"/>
+            android:text="Stop"
+            android:layout_weight="1" />
+<!--        <Button-->
+<!--            android:id="@+id/stop_mission"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="END"-->
+<!--            android:layout_weight="1"/>-->
     </LinearLayout>
 
     <LinearLayout

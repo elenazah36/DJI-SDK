@@ -14,6 +14,7 @@ import com.example.mapviewdemo.DJIDemoApplication.getCameraInstance
 import dji.common.camera.SettingsDefinitions
 import dji.common.error.DJIError
 import dji.common.error.DJIMissionError
+import dji.common.flightcontroller.ControlMode
 import dji.common.flightcontroller.LocationCoordinate3D
 import dji.common.flightcontroller.virtualstick.*
 import dji.common.gimbal.Rotation
@@ -30,9 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
-import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.*
 
 private const val TAG = "MMMissionOperator"
 
@@ -59,6 +58,7 @@ class MavicMiniMissionOperator(context: Context) {
 
     private var travelledLongitude = false
     private var travelledLatitude = false
+    private var travelledAltitude = false
     private var waypointTracker = 0
 
     private var sendDataTimer =
@@ -67,6 +67,7 @@ class MavicMiniMissionOperator(context: Context) {
 
     private var originalLongitudeDiff = -1.0
     private var originalLatitudeDiff = -1.0
+    private var originalAltitudeDiff = -1.0
     private var directions = Direction(altitude = 0f)
 
     private var currentGimbalPitch: Float = 0f
@@ -275,6 +276,27 @@ class MavicMiniMissionOperator(context: Context) {
         return  distance3D
     }
 
+//    private fun distanceInMeters3d(
+//        a: LocationCoordinate2D,
+//        alt_a: Float,
+//        b: LocationCoordinate2D,
+//        alt_b: Float
+//    ): Double {
+//        //from https://stackoverflow.com/a/19412565
+//        val R = 6367444.65
+//        val dlon = Math.toRadians(a.longitude) - Math.toRadians(b.longitude)
+//        val dlat = Math.toRadians(a.latitude) - Math.toRadians(b.latitude)
+//
+//        val a =
+//            sin(dlat / 2).pow(2.0) + cos(Math.toRadians(a.latitude)) * cos(Math.toRadians(b.latitude)) * sin(
+//                dlon / 2
+//            ).pow(2.0)
+//        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+//
+//        var distance2D = R * c
+//        return sqrt((alt_a.toDouble() - alt_b.toDouble()).pow(2.0) + distance2D.pow(2.0))
+//    }
+
     //Function used to execute the current waypoint mission
     private fun executeMission() {
         state = WaypointMissionState.EXECUTION_STARTING
@@ -315,33 +337,34 @@ class MavicMiniMissionOperator(context: Context) {
 //        )
 
         distanceToWaypoint = distanceToWaypoint3D
-        if (!isLanded && !isLanding) {
+//        if (!isLanded && !isLanding) {
             //If the drone has arrived at the destination, take a photo.
-            if (!photoTakenToggle && (distanceToWaypoint < 1.5)) {//if you haven't taken a photo
-                photoTakenToggle = takePhoto()
-                Log.d(
-                    TAG,
-                    "attempting to take photo: $photoTakenToggle, $photoIsSuccess"
-                )
-            } else if (photoTakenToggle && (distanceToWaypoint >= 1.5)) {
-                photoTakenToggle = false
-                photoIsSuccess = false
-            }
-        }
+//            if (!photoTakenToggle && (distanceToWaypoint < 1.5)) {//if you haven't taken a photo
+//                photoTakenToggle = takePhoto()
+//                Log.d(
+//                    TAG,
+//                    "attempting to take photo: $photoTakenToggle, $photoIsSuccess"
+//                )
+//            } else if (photoTakenToggle && (distanceToWaypoint >= 1.5)) {
+//                photoTakenToggle = false
+//                photoIsSuccess = false
+//            }
+//        }
 
         val longitudeDiff =
             currentWaypoint.coordinate.longitude - currentLocation.longitude
         val latitudeDiff =
             currentWaypoint.coordinate.latitude - currentLocation.latitude
-
+        val altitudeDiff = currentWaypoint.altitude.toDouble() - currentLocation.altitude.toDouble()
         if (abs(latitudeDiff) > originalLatitudeDiff) {
             originalLatitudeDiff = abs(latitudeDiff)
         }
-
         if (abs(longitudeDiff) > originalLongitudeDiff) {
             originalLongitudeDiff = abs(longitudeDiff)
         }
-
+        if (abs(altitudeDiff) > originalAltitudeDiff) {
+            originalAltitudeDiff = abs(altitudeDiff)
+        }
         //terminating the sendDataTimer and creating a new one
         sendDataTimer.cancel()
         sendDataTimer = Timer()
@@ -351,20 +374,22 @@ class MavicMiniMissionOperator(context: Context) {
                 (mission.autoFlightSpeed * (abs(longitudeDiff) / (originalLongitudeDiff))).toFloat(),
                 0.5f
             )
-
             directions.pitch = if (longitudeDiff > 0) speed else -speed
-
         }
-
         if (!travelledLatitude) {
             val speed = kotlin.math.max(
                 (mission.autoFlightSpeed * (abs(latitudeDiff) / (originalLatitudeDiff))).toFloat(),
                 0.5f
             )
-
             directions.roll = if (latitudeDiff > 0) speed else -speed
-
         }
+//        if (!travelledAltitude) {
+//            val speed = kotlin.math.max(
+//                (mission.autoFlightSpeed * (abs(altitudeDiff) / (originalAltitudeDiff))).toFloat(),
+//                0.5f
+//            )
+//            directions.altitude = if (altitudeDiff > 0) speed else -speed
+//        }
 
         //when the longitude difference becomes insignificant:
         if (abs(longitudeDiff) < 0.000001) {
@@ -372,30 +397,36 @@ class MavicMiniMissionOperator(context: Context) {
             directions.pitch = 0f
             travelledLongitude = true
         }
-
-
         if (abs(latitudeDiff) < 0.000001) {
             Log.i(TAG, "finished travelling LATITUDE")
             directions.roll = 0f
             travelledLatitude = true
         }
+        if (abs(altitudeDiff) < 0.5) {
+            Log.i(TAG, "finished travelling ALTITUDE")
+//            directions.altitude = 0f
+            travelledAltitude = true
+        }
 
         //when the latitude difference becomes insignificant and there
         //... is no longitude difference (current waypoint has been reached):
-        if (travelledLatitude && travelledLongitude) {
+        if (travelledLatitude && travelledLongitude && travelledAltitude) {
             //move to the next waypoint in the waypoints list
             waypointTracker++
             if (waypointTracker < waypoints.size) {
                 currentWaypoint = waypoints[waypointTracker]
-                originalLatitudeDiff = -1.0
                 originalLongitudeDiff = -1.0
+                originalLatitudeDiff = -1.0
+                originalAltitudeDiff = -1.0
                 travelledLongitude = false
                 travelledLatitude = false
+                travelledAltitude = false
                 directions = Direction()
             } else { //If all waypoints have been reached, stop the mission
                 state = WaypointMissionState.EXECUTION_STOPPING
                 operatorListener?.onExecutionFinish(null)
                 stopMission(null)
+                landing(null)
                 isLanding = true
                 sendDataTimer.cancel()
                 if (isLanding && currentLocation.altitude == 0f) {
@@ -448,12 +479,19 @@ class MavicMiniMissionOperator(context: Context) {
 
     // Function used to stop the current waypoint mission and land the drone
     fun stopMission(callback: CommonCallbacks.CompletionCallback<DJIMissionError>?) {
+        state = WaypointMissionState.EXECUTION_STOPPING
+        operatorListener?.onExecutionFinish(null)
 //        if (!isLanding) {
 //            showToast(mContext, "trying to land")
 //        }
-        DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(20) {
-            DJIDemoApplication.getFlightController()?.startGoHome(callback)
-        }
+//        DJIDemoApplication.getFlightController()?.setGoHomeHeightInMeters(20) {
+//            DJIDemoApplication.getFlightController()?.startGoHome(callback)
+//        }
+//        landing()
+//        forceStopMission(null)
+    }
+
+    fun landing(callback: CommonCallbacks.CompletionCallback<DJIMissionError>?){
         DJIDemoApplication.getFlightController()?.let { controller ->
             controller.startLanding { djiError ->
                 if (djiError != null) {
@@ -470,9 +508,34 @@ class MavicMiniMissionOperator(context: Context) {
     fun forceStopMission(callback: CommonCallbacks.CompletionCallback<DJIMissionError>?){
         state = WaypointMissionState.EXECUTION_STOPPING
         operatorListener?.onExecutionFinish(null)
-        stopMission(null)
+//        stopMission(null)
 //        isLanding = true
         sendDataTimer.cancel()
+        DJIDemoApplication.getFlightController()?.let { controller ->
+            controller.startLanding { djiError ->
+                if (djiError != null) {
+//                            Log.i(TAG, djiError.description)
+                    showToast(mContext,"Landing Error: ${djiError.description}")
+                } else {
+//                            Log.i(TAG,"Start Landing Success")
+//                    showToast(mContext,"Start Landing Success")
+                }
+            }
+        }
+        Thread.sleep(100)
+        DJIDemoApplication.getFlightController()?.let { controller ->
+            controller.cancelLanding { djiError ->
+                if (djiError != null) {
+//                            Log.i(TAG, djiError.description)
+                    showToast(mContext,"Landing Error: ${djiError.description}")
+                } else {
+//                            Log.i(TAG,"Start Landing Success")
+//                    showToast(mContext,"Start Landing Success")
+                }
+            }
+        }
+
+        showToast(mContext,"Operation stopped!")
 //        if (!isLanding)
 //            showToast(mContext, "trying to land")
 //        if (isLanding && currentWaypoint.altitude == 0f) {

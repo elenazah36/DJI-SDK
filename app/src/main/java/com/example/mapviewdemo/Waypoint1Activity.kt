@@ -185,7 +185,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         showTrack = findViewById(R.id.showTrack)
         clearWaypoints = findViewById(R.id.clearWaypoints)
         start_mission = findViewById(R.id.start_mission)
-        stop_mission = findViewById(R.id.stop_mission)
+//        stop_mission = findViewById(R.id.stop_mission)
         force_stop = findViewById(R.id.forceStop)
         startland = findViewById(R.id.btn_startland)
         opengpx = findViewById(R.id.btn_opengpx)
@@ -201,7 +201,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         showTrack.setOnClickListener(this)
         clearWaypoints.setOnClickListener(this)
         start_mission.setOnClickListener(this)
-        stop_mission.setOnClickListener(this)
+//        stop_mission.setOnClickListener(this)
         force_stop.setOnClickListener(this)
         startland.setOnClickListener(this)
         opengpx.setOnClickListener(this)
@@ -357,50 +357,50 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }.start()
     }
 
-    private fun recordToGPX(points: MutableList<LatLng>){
-        val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<gpx" +
-                "  version=\"1.1\"\n" +
-                "  creator=\"VinEye - UTCN\"\n" //+
-                "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
-                "  xmlns=\"http://www.topografix.com/GPX/1/1\"\n" +
-                "  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"\n" +
-                "  xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n"
-        var segments = ""
-        val gpxdate = SimpleDateFormat("yyyy-MM-dd")
-        val gpxcurrentDate = gpxdate.format(Date()).toString()
-        val gpxtime = SimpleDateFormat("hh:mm:ss")
-        val gpxcurrentTime = gpxtime.format(Date()).toString()
-        for (location in points) {
-            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\"><ele>${location.altitude}</ele><time>${gpxcurrentDate}T${gpxcurrentTime}Z</time><desc>0</desc></wpt>\n"
-        }
-        val footer = "</gpx>"
-        val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
-        val currentDateandTime = sdf.format(Date()).toString() + ".gpx"
-        val mydir = File(Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DOCUMENTS),
-            "$gpxFolder"
-        )
-        if (!mydir.exists()) {
-            mydir.mkdirs()
-        }
-        val file = File(Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DOCUMENTS),
-            "$gpxFolder$currentDateandTime"
-        )
-        try {
-            FileOutputStream(file).use {
-                it.write(header.toByteArray())
-                it.write(segments.toByteArray())
-                it.write(footer.toByteArray())
-                it.flush()
-                it.close()
-                setResultToToast("GPX file saved")}
-
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-    }
+//    private fun recordToGPX(points: MutableList<LatLng>){
+//        val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+//                "<gpx" +
+//                "  version=\"1.1\"\n" +
+//                "  creator=\"VinEye - UTCN\"\n" //+
+//                "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+//                "  xmlns=\"http://www.topografix.com/GPX/1/1\"\n" +
+//                "  xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\"\n" +
+//                "  xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n"
+//        var segments = ""
+//        val gpxdate = SimpleDateFormat("yyyy-MM-dd")
+//        val gpxcurrentDate = gpxdate.format(Date()).toString()
+//        val gpxtime = SimpleDateFormat("hh:mm:ss")
+//        val gpxcurrentTime = gpxtime.format(Date()).toString()
+//        for (location in points) {
+//            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\"><ele>${location.altitude}</ele><time>${gpxcurrentDate}T${gpxcurrentTime}Z</time><desc>0</desc></wpt>\n"
+//        }
+//        val footer = "</gpx>"
+//        val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
+//        val currentDateandTime = sdf.format(Date()).toString() + ".gpx"
+//        val mydir = File(Environment.getExternalStoragePublicDirectory(
+//            Environment.DIRECTORY_DOCUMENTS),
+//            "$gpxFolder"
+//        )
+//        if (!mydir.exists()) {
+//            mydir.mkdirs()
+//        }
+//        val file = File(Environment.getExternalStoragePublicDirectory(
+//            Environment.DIRECTORY_DOCUMENTS),
+//            "$gpxFolder$currentDateandTime"
+//        )
+//        try {
+//            FileOutputStream(file).use {
+//                it.write(header.toByteArray())
+//                it.write(segments.toByteArray())
+//                it.write(footer.toByteArray())
+//                it.flush()
+//                it.close()
+//                setResultToToast("GPX file saved")}
+//
+//        } catch (e: IOException) {
+//            e.printStackTrace()
+//        }
+//    }
 
     private fun recordToGPXyaw(points: MutableList<Waypoint>){
         val header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
@@ -584,12 +584,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     }
 
     private fun stopWaypointMission() { // stop mission
+        waypointMissionBuilder?.autoFlightSpeed(0.0F)
         getWaypointMissionOperator()?.stopMission { error ->
             setResultToToast("Mission Stop: " + if (error == null) "Successfully" else error.description)
         }
     }
 
     private fun forceStopWaypointMission() { // stop mission
+        waypointMissionBuilder?.autoFlightSpeed(0.0F)
         getWaypointMissionOperator()?.forceStopMission { error ->
             setResultToToast("Mission Stop: " + if (error == null) "Successfully" else error.description)
         }
@@ -876,23 +878,15 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 startWaypointMission()
             }
 
-            R.id.stop_mission -> {
-                stopWaypointMission()
-            }
+//            R.id.stop_mission -> {
+//                stopWaypointMission()
+//            }
 
             R.id.forceStop -> {
                 forceStopWaypointMission()
             }
             R.id.btn_startland -> {
-                DJIDemoApplication.getFlightController()?.let { controller ->
-                    controller.startLanding { djiError ->
-                        if (djiError != null) {
-                            setResultToToast("Landing Error: ${djiError.description}")
-                        } else {
-                            setResultToToast("Start Landing Success")
-                        }
-                    }
-                }
+                getWaypointMissionOperator()?.landing(null)
             }
             R.id.btn_opengpx -> {
                 val intent = Intent()
