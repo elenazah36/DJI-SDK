@@ -310,10 +310,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             droneMarker?.remove()
             if (checkGpsCoordination(droneLocationLat, droneLocationLng)) {
                 droneMarker = mapboxMap?.addMarker(markerOptions)
-                sb.append("Latitude:").append(wayPt.coordinate.latitude).append("\n")
-                sb.append("Longitude:").append(wayPt.coordinate.longitude).append("\n")
-                sb.append("Altitude:").append(wayPt.altitude).append("\n")
-                sb.append("Orientation:").append(wayPt.heading).append("\n")
+                sb.append("Latitude:").append(String.format("%.5f", wayPt.coordinate.latitude)).append("\n")
+                sb.append("Longitude:").append(String.format("%.5f", wayPt.coordinate.longitude)).append("\n")
+                sb.append("Altitude:").append(String.format("%.5f", wayPt.altitude.toDouble())).append("\n")
+                sb.append("Orientation:").append(String.format("%.2f", wayPt.heading.toDouble())).append("\n")
+                mTextGPS.text = sb.toString()
             }
         }
     }
