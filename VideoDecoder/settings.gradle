@@ -1,0 +1,3 @@
+rootProject.name = "VideoDecoder"
+include ':app'
+include ':libs'
