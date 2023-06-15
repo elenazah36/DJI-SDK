@@ -1,11 +1,17 @@
 package com.riis.videodecoder
 
 import android.app.Activity
-import android.graphics.ImageFormat
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.SurfaceTexture
 import android.graphics.YuvImage
-import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.os.*
 import android.util.Log
@@ -28,9 +34,14 @@ import dji.sdk.camera.Camera
 import dji.sdk.camera.VideoFeeder
 import dji.sdk.codec.DJICodecManager
 import dji.sdk.sdkmanager.DJISDKManager
-import dji.thirdparty.afinal.core.AsyncTask
+
+import org.pytorch.IValue
+import org.pytorch.Module
+import org.pytorch.Tensor
+import org.pytorch.torchvision.TensorImageUtils
 import java.io.*
 import java.nio.ByteBuffer
+
 
 
 class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
@@ -59,6 +70,9 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     private var videostreamPreviewTtView: TextureView? = null
     private var videostreamPreviewSf: SurfaceView? = null
     private var videostreamPreviewSh: SurfaceHolder? = null
+
+    private lateinit var surfaceHolder: SurfaceHolder
+
     private var mCamera: Camera? = null
     private var mCodecManager: DJICodecManager? = null
     private var savePath: TextView? = null
@@ -67,6 +81,12 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     private var videoViewWidth = 0
     private var videoViewHeight = 0
     private var count = 0
+
+    private val jMod: Module? = null
+    private var module = Module.load(assetFilePath(this, "your_model.pt"))
+    private lateinit var inputTensor: Tensor
+
+
     override fun onResume() {
         super.onResume()
         initSurfaceOrTextureView()
@@ -150,6 +170,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         titleTv = findViewById<View>(R.id.title_tv) as TextView
         videostreamPreviewTtView = findViewById<View>(R.id.livestream_preview_ttv) as TextureView
         videostreamPreviewSf = findViewById<View>(R.id.livestream_preview_sf) as SurfaceView
+
+
         videostreamPreviewSf!!.isClickable = true
         videostreamPreviewSf!!.setOnClickListener {
             val rate: Float = VideoFeeder.getInstance().transcodingDataRate
@@ -216,7 +238,10 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
                     lastupdate = System.currentTimeMillis()
                 }
                 when (demoType) {
-                    DemoType.USE_SURFACE_VIEW -> mCodecManager?.sendDataToDecoder(videoBuffer, size)
+                    DemoType.USE_SURFACE_VIEW ->{
+                        mCodecManager?.sendDataToDecoder(videoBuffer, size)
+
+                    }
                     DemoType.USE_SURFACE_VIEW_DEMO_DECODER ->
                         /**
                          * we use standardVideoFeeder to pass the transcoded video data to DJIVideoStreamDecoder, and then display it
@@ -327,6 +352,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         videostreamPreviewSh = videostreamPreviewSf!!.holder
         surfaceCallback = object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
+
                 Log.d(TAG, "real onSurfaceTextureAvailable")
                 videoViewWidth = videostreamPreviewSf!!.width
                 videoViewHeight = videostreamPreviewSf!!.height
@@ -389,6 +415,26 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         videostreamPreviewSh!!.addCallback(surfaceCallback)
     }
 
+    @Throws(IOException::class)
+    fun assetFilePath(context: Context, assetName: String?): String? {
+        val file = File(context.filesDir, assetName)
+        if (file.exists() && file.length() > 0) {
+            return file.absolutePath
+        }
+        context.assets.open(assetName!!).use { `is` ->
+            FileOutputStream(file).use { os ->
+                val buffer = ByteArray(4 * 1024)
+                var read: Int
+                while (`is`.read(buffer).also { read = it } != -1) {
+                    os.write(buffer, 0, read)
+                }
+                os.flush()
+            }
+            return file.absolutePath
+        }
+    }
+
+
     override fun onYuvDataReceived(
         format: MediaFormat,
         yuvFrame: ByteBuffer?,
@@ -396,208 +442,151 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         width: Int,
         height: Int
     ) {
-        //In this demo, we test the YUV data by saving it into JPG files.
-        //DJILog.d(TAG, "onYuvDataReceived " + dataSize);
-        if (count++ % 30 == 0 && yuvFrame != null) {
-            val bytes = ByteArray(dataSize)
-            yuvFrame[bytes]
-            //DJILog.d(TAG, "onYuvDataReceived2 " + dataSize);
-            AsyncTask.execute(Runnable {
-                // two samples here, it may has other color format.
-                when (format.getInteger(MediaFormat.KEY_COLOR_FORMAT)) {
-                    MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar ->                             //NV12
-                        if (Build.VERSION.SDK_INT <= 23) {
-                            oldSaveYuvDataToJPEG(bytes, width, height)
-                        } else {
-                            newSaveYuvDataToJPEG(bytes, width, height)
-                        }
-                    MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar ->                             //YUV420P
-                        newSaveYuvDataToJPEG420P(bytes, width, height)
-                    else -> {}
-                }
-            })
-        }
+
+        // Convert the YUV data ByteBuffer to a byte array
+        val yuvData = ByteArray(dataSize)
+        yuvFrame?.get(yuvData)
+
+        // Create a YuvImage object from the YUV data
+        val yuvImage = YuvImage(yuvData, format.getInteger(MediaFormat.KEY_COLOR_FORMAT), width, height, null)
+
+        // Convert the YuvImage to a ByteArrayOutputStream
+        val outputStream = ByteArrayOutputStream()
+        yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, outputStream)
+
+        // Convert the ByteArrayOutputStream to a byte array
+        val jpegByteArray = outputStream.toByteArray()
+
+        // Create a Bitmap from the byte array
+        val bitmap = BitmapFactory.decodeByteArray(jpegByteArray, 0, jpegByteArray.size)
+
+        // Bitmap for further processing or display
+        performObjectDetection(bitmap, module)
+
+
     }
 
-    // For android API <= 23
-    private fun oldSaveYuvDataToJPEG(yuvFrame: ByteArray, width: Int, height: Int) {
-        if (yuvFrame.size < width * height) {
-            //DJILog.d(TAG, "yuvFrame size is too small " + yuvFrame.length);
-            return
-        }
-        val y = ByteArray(width * height)
-        val u = ByteArray(width * height / 4)
-        val v = ByteArray(width * height / 4)
-        val nu = ByteArray(width * height / 4) //
-        val nv = ByteArray(width * height / 4)
-        System.arraycopy(yuvFrame, 0, y, 0, y.size)
-        for (i in u.indices) {
-            v[i] = yuvFrame[y.size + 2 * i]
-            u[i] = yuvFrame[y.size + 2 * i + 1]
-        }
-        val uvWidth = width / 2
-        val uvHeight = height / 2
-        for (j in 0 until uvWidth / 2) {
-            for (i in 0 until uvHeight / 2) {
-                val uSample1 = u[i * uvWidth + j]
-                val uSample2 = u[i * uvWidth + j + uvWidth / 2]
-                val vSample1 = v[(i + uvHeight / 2) * uvWidth + j]
-                val vSample2 = v[(i + uvHeight / 2) * uvWidth + j + uvWidth / 2]
-                nu[2 * (i * uvWidth + j)] = uSample1
-                nu[2 * (i * uvWidth + j) + 1] = uSample1
-                nu[2 * (i * uvWidth + j) + uvWidth] = uSample2
-                nu[2 * (i * uvWidth + j) + 1 + uvWidth] = uSample2
-                nv[2 * (i * uvWidth + j)] = vSample1
-                nv[2 * (i * uvWidth + j) + 1] = vSample1
-                nv[2 * (i * uvWidth + j) + uvWidth] = vSample2
-                nv[2 * (i * uvWidth + j) + 1 + uvWidth] = vSample2
+    fun performObjectDetection(bitmap: Bitmap, model: Module): List<DetectedObject> {
+        // Preprocess the input image
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap,
+            INPUT_IMAGE_SIZE,
+            INPUT_IMAGE_SIZE, false)
+        val rotatedBitmap = rotateBitmap(resizedBitmap, 90f) // Adjust rotation if needed
+        val normalizedTensor = preprocessImage(rotatedBitmap)
+
+        // Run the inference
+        val outputTensor = model.forward(IValue.from(normalizedTensor)).toTensor()
+
+        // Process the output tensor and extract detected objects
+        val detectedObjects = processOutputTensor(outputTensor)
+
+        return detectedObjects
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix()
+        matrix.postRotate(degrees)
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
+    private fun preprocessImage(bitmap: Bitmap): Tensor {
+        // Resize and normalize the image
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap,
+            INPUT_IMAGE_SIZE,
+            INPUT_IMAGE_SIZE, false)
+        val inputTensor = TensorImageUtils.bitmapToFloat32Tensor(resizedBitmap, TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
+            TensorImageUtils.TORCHVISION_NORM_STD_RGB)
+        return inputTensor
+    }
+
+    private fun processOutputTensor(outputTensor: Tensor): List<DetectedObject> {
+        val results = mutableListOf<DetectedObject>()
+
+        val outputData = outputTensor.dataAsFloatArray
+        val numClasses = outputData.size / (5 + NUM_ANCHORS)
+
+        for (y in 0 until GRID_SIZE) {
+            for (x in 0 until GRID_SIZE) {
+                for (anchorIndex in 0 until NUM_ANCHORS) {
+                    val baseIndex = y * GRID_SIZE * (5 + NUM_ANCHORS) + x * (5 + NUM_ANCHORS) + anchorIndex * (5 + numClasses)
+                    val confidence = outputData[baseIndex + 4]
+                    if (confidence > CONFIDENCE_THRESHOLD) {
+                        val xCenter = (outputData[baseIndex] + x) / GRID_SIZE
+                        val yCenter = (outputData[baseIndex + 1] + y) / GRID_SIZE
+                        val width = outputData[baseIndex + 2].coerceAtLeast(0f)
+                        val height = outputData[baseIndex + 3].coerceAtLeast(0f)
+                        val classProbabilities = outputData.sliceArray(baseIndex + 5 until baseIndex + 5 + numClasses)
+
+                        val maxClassProbability = classProbabilities.maxOrNull()
+                        val maxClassIndex =
+                            maxClassProbability?.let { findIndex(classProbabilities, it) }
+
+                        val left = (xCenter - width / 2) * IMAGE_WIDTH
+                        val top = (yCenter - height / 2) * IMAGE_HEIGHT
+                        val right = (xCenter + width / 2) * IMAGE_WIDTH
+                        val bottom = (yCenter + height / 2) * IMAGE_HEIGHT
+
+                        val detectedObject = maxClassIndex?.let { getClassLabel(it) }?.let {
+                            DetectedObject(
+                                className = it,
+                                confidence = confidence,
+                                boundingBox = RectF(left, top, right, bottom)
+                            )
+                        }
+                        if (detectedObject != null) {
+                            results.add(detectedObject)
+                            showToast("Detected" + detectedObject.className)
+                        }
+                    }
+                }
             }
         }
-        //nv21test
-        val bytes = ByteArray(yuvFrame.size)
-        System.arraycopy(y, 0, bytes, 0, y.size)
-        for (i in u.indices) {
-            bytes[y.size + i * 2] = nv[i]
-            bytes[y.size + i * 2 + 1] = nu[i]
-        }
-        Log.d(
-            TAG,
-            ("onYuvDataReceived: frame index: "
-                    + DJIVideoStreamDecoder.instance?.frameIndex
-                    ) + ",array length: "
-                    + bytes.size
-        )
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-            screenShot(
-                bytes,
-                applicationContext.getExternalFilesDir("DJI")!!.path + "/DJI_ScreenShot",
-                width,
-                height
-            )
-        } else {
-            screenShot(
-                bytes,
-                Environment.getExternalStorageDirectory().toString() + "/DJI_ScreenShot",
-                width,
-                height
-            )
+
+        return results
+    }
+
+    fun findIndex(list: FloatArray, element: Float): Int? {
+        for (index in 0 until list.size)
+            if (list[index] == element) {
+                return index
+            }
+        return null
+    }
+
+    // Draw the bounding boxes, not used yet
+    private fun drawBoundingBoxes(canvas: Canvas, detectionResults: List<DetectedObject>) {
+        val paint = Paint()
+        paint.color = Color.GREEN
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 2.0f
+        for (detectionResult in detectionResults) {
+            val boundingBox: RectF = detectionResult.boundingBox
+            canvas.drawRect(boundingBox, paint)
         }
     }
 
-    private fun newSaveYuvDataToJPEG(yuvFrame: ByteArray, width: Int, height: Int) {
-        if (yuvFrame.size < width * height) {
-            //DJILog.d(TAG, "yuvFrame size is too small " + yuvFrame.length);
-            return
-        }
-        val length = width * height
-        val u = ByteArray(width * height / 4)
-        val v = ByteArray(width * height / 4)
-        for (i in u.indices) {
-            v[i] = yuvFrame[length + 2 * i]
-            u[i] = yuvFrame[length + 2 * i + 1]
-        }
-        for (i in u.indices) {
-            yuvFrame[length + 2 * i] = u[i]
-            yuvFrame[length + 2 * i + 1] = v[i]
-        }
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-            screenShot(
-                yuvFrame,
-                applicationContext.getExternalFilesDir("DJI")!!.path + "/DJI_ScreenShot",
-                width,
-                height
-            )
-        } else {
-            screenShot(
-                yuvFrame,
-                Environment.getExternalStorageDirectory().toString() + "/DJI_ScreenShot",
-                width,
-                height
-            )
+    data class DetectedObject(
+        val className: String,
+        val confidence: Float,
+        val boundingBox: RectF
+    )
+
+
+    private fun getClassLabel(classIndex: Int): String {
+        // Map class index to class label
+        // Modify this function according to your specific class labels
+        return when (classIndex) {
+            0 -> "person"
+            1 -> "car"
+            2 -> "dog"
+            else -> "unknown"
         }
     }
 
-    private fun newSaveYuvDataToJPEG420P(yuvFrame: ByteArray, width: Int, height: Int) {
-        if (yuvFrame.size < width * height) {
-            return
-        }
-        val length = width * height
-        val u = ByteArray(width * height / 4)
-        val v = ByteArray(width * height / 4)
-        for (i in u.indices) {
-            u[i] = yuvFrame[length + i]
-            v[i] = yuvFrame[length + u.size + i]
-        }
-        for (i in u.indices) {
-            yuvFrame[length + 2 * i] = v[i]
-            yuvFrame[length + 2 * i + 1] = u[i]
-        }
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-            screenShot(
-                yuvFrame,
-                applicationContext.getExternalFilesDir("DJI")!!.path + "/DJI_ScreenShot",
-                width,
-                height
-            )
-        } else {
-            screenShot(
-                yuvFrame,
-                Environment.getExternalStorageDirectory().toString() + "/DJI_ScreenShot",
-                width,
-                height
-            )
-        }
-    }
-
-    /**
-     * Save the buffered data into a JPG image file
-     */
-    private fun screenShot(buf: ByteArray, shotDir: String, width: Int, height: Int) {
-        val dir = File(shotDir)
-        if (!dir.exists() || !dir.isDirectory) {
-            dir.mkdirs()
-        }
-        val yuvImage = YuvImage(
-            buf,
-            ImageFormat.NV21,
-            width,
-            height,
-            null
-        )
-        val outputFile: OutputStream
-        val path = dir.toString() + "/ScreenShot_" + System.currentTimeMillis() + ".jpg"
-        outputFile = try {
-            FileOutputStream(File(path))
-        } catch (e: FileNotFoundException) {
-            Log.e(
-                TAG,
-                "test screenShot: new bitmap output file error: $e"
-            )
-            return
-        }
-        yuvImage.compressToJpeg(
-            Rect(
-                0,
-                0,
-                width,
-                height
-            ), 100, outputFile
-        )
-        try {
-            outputFile.close()
-        } catch (e: IOException) {
-            Log.e(
-                TAG,
-                "test screenShot: compress yuv image error: $e"
-            )
-            e.printStackTrace()
-        }
-        runOnUiThread { displayPath(path) }
-    }
 
     fun onClick(v: View) {
         if (v.id == R.id.activity_main_screen_shot) {
-            handleYUVClick()
+            //smth
         } else {
             var newDemoType: DemoType? = null
             if (v.id == R.id.activity_main_screen_texture) {
@@ -623,57 +612,6 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         }
     }
 
-    private fun handleYUVClick() {
-        if (screenShot!!.isSelected) {
-            screenShot!!.text = "YUV Screen Shot"
-            screenShot!!.isSelected = false
-            when (demoType) {
-                DemoType.USE_SURFACE_VIEW, DemoType.USE_TEXTURE_VIEW -> {
-                    mCodecManager?.enabledYuvData(false)
-                    mCodecManager?.yuvDataCallback = null
-                }
-                DemoType.USE_SURFACE_VIEW_DEMO_DECODER -> {
-                    DJIVideoStreamDecoder.instance
-                        ?.changeSurface(videostreamPreviewSh!!.surface)
-                    DJIVideoStreamDecoder.instance?.setYuvDataListener(null)
-                }
-                else -> {}
-            }
-            savePath!!.text = ""
-            savePath!!.visibility = View.INVISIBLE
-            stringBuilder = null
-        } else {
-            screenShot!!.text = "Live Stream"
-            screenShot!!.isSelected = true
-            when (demoType) {
-                DemoType.USE_TEXTURE_VIEW, DemoType.USE_SURFACE_VIEW -> {
-                    mCodecManager?.enabledYuvData(true)
-                    mCodecManager?.yuvDataCallback = this
-                }
-                DemoType.USE_SURFACE_VIEW_DEMO_DECODER -> {
-                    DJIVideoStreamDecoder.instance?.changeSurface(null)
-                    DJIVideoStreamDecoder.instance?.setYuvDataListener(this@MainActivity)
-                }
-                else -> {}
-            }
-            savePath!!.text = ""
-            savePath!!.visibility = View.VISIBLE
-        }
-    }
-
-    private fun displayPath(_path: String) {
-        var path = _path
-        if (stringBuilder == null) {
-            stringBuilder = StringBuilder()
-        }
-        path = """
-            $path
-            
-            """.trimIndent()
-        stringBuilder!!.append(path)
-        savePath!!.text = stringBuilder.toString()
-    }
-
     private val isTranscodedVideoFeedNeeded: Boolean
         get() = if (VideoFeeder.getInstance() == null) {
             false
@@ -693,5 +631,11 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
                 val model: Model = DJISDKManager.getInstance().product.model
                 return model === Model.MATRICE_300_RTK
             }
+        private const val INPUT_IMAGE_SIZE = 640
+        private const val GRID_SIZE = 20
+        private const val NUM_ANCHORS = 3
+        private const val CONFIDENCE_THRESHOLD = 0.5f
+        private const val IMAGE_WIDTH = 640
+        private const val IMAGE_HEIGHT = 480
     }
 }
