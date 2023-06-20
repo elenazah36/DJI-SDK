@@ -36,6 +36,7 @@ import dji.sdk.codec.DJICodecManager
 import dji.sdk.sdkmanager.DJISDKManager
 
 import org.pytorch.IValue
+import org.pytorch.LiteModuleLoader
 import org.pytorch.Module
 import org.pytorch.Tensor
 import org.pytorch.torchvision.TensorImageUtils
@@ -82,10 +83,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     private var videoViewHeight = 0
     private var count = 0
 
-    private val jMod: Module? = null
     private var module = Module.load(assetFilePath(this, "your_model.pt"))
-    private lateinit var inputTensor: Tensor
-
 
     override fun onResume() {
         super.onResume()
