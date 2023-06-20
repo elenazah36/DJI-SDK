@@ -522,7 +522,7 @@ class MavicMiniMissionOperator(context: Context) {
                 }
             }
         }
-        Thread.sleep(100)
+        Thread.sleep(500)
         DJIDemoApplication.getFlightController()?.let { controller ->
             controller.cancelLanding { djiError ->
                 if (djiError != null) {
