@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
@@ -81,6 +82,7 @@ class ConnectionActivity : AppCompatActivity() {
 
         //If mBtnOpen Button is clicked on, start MainActivity (only works when button is enabled)
         mBtnOpen.setOnClickListener {
+            runOnUiThread { Toast.makeText(this, "opening", Toast.LENGTH_SHORT).show() }
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
