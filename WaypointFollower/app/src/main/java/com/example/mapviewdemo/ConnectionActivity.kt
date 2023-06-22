@@ -1,14 +1,19 @@
 package com.example.mapviewdemo
 import android.Manifest
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import dji.sdk.sdkmanager.DJISDKManager
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ConnectionActivity : AppCompatActivity() {
     private lateinit var mTextConnectionStatus: TextView
@@ -23,10 +28,49 @@ class ConnectionActivity : AppCompatActivity() {
         const val TAG = "ConnectionActivity"
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_connection)
+    fun logging() {
+        var logfolder = "Logs/"
+        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
+        val currentDateandTime = sdf.format(Date()).toString()
+        var filename = "logcat_" + currentDateandTime + ".txt"
+        var filename_all = "logcat_" + currentDateandTime + "_all.txt"
+        val mydir = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS
+            ),
+            "$logfolder"
+        )
+        if (!mydir.exists()) {
+            mydir.mkdirs()
+        }
+        val logfile = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS
+            ),
+            "$logfolder$filename"
+        )
+        val logfileAll = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS
+            ),
+            "$logfolder$filename_all"
+        )
+        try {
+//            Runtime.getRuntime().exec("logcat -c")
+//            Thread.sleep(200)
+            Runtime.getRuntime().exec("logcat -f ${logfile.absolutePath} *:S $TAG:D ${Waypoint1Activity.TAG}:D ${MavicMiniMissionOperator.TAG}:D")
+            Runtime.getRuntime().exec("logcat -f" + logfileAll.absolutePath)
+        } catch (e: Exception) {
+        }
+    }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        logging()
+        Log.d(TAG,"Initializing Connection Activity")
+        super.onCreate(savedInstanceState)
+        Log.i(TAG,"Setting Content View")
+        setContentView(R.layout.activity_connection)
+        Log.d(TAG,"Requesting permissions")
         ActivityCompat.requestPermissions(this, // request all the permissions that we'll need
             arrayOf(
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -51,6 +95,7 @@ class ConnectionActivity : AppCompatActivity() {
     }
 
     private fun initUI() { // Initializes the UI with all the string values
+        Log.d(TAG,"Initializing UI")
         mTextConnectionStatus = findViewById(R.id.text_connection_status)
         mTextModelAvailable = findViewById(R.id.text_model_available)
         mTextProduct = findViewById(R.id.text_product_info)

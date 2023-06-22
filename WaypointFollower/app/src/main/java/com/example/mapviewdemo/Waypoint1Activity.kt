@@ -5,11 +5,13 @@ import android.content.Intent
 import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.os.Environment
+import android.util.Log
 import android.view.TextureView
 import android.view.View
-import android.widget.*
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
@@ -23,14 +25,11 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.maps.SupportMapFragment
 import dji.common.camera.SettingsDefinitions
-import dji.common.camera.SettingsDefinitions.CameraMode
 import dji.common.camera.SettingsDefinitions.FlatCameraMode
 import dji.common.error.DJIError
 import dji.common.mission.waypoint.*
 import dji.common.product.Model
 import dji.common.util.CommonCallbacks
-import dji.common.util.CommonCallbacks.CompletionCallbackWith
-import dji.mop.common.PipelineError.callback
 import dji.sdk.base.BaseProduct
 import dji.sdk.camera.Camera
 import dji.sdk.camera.VideoFeeder
@@ -55,6 +54,8 @@ import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
 
+private const val TAG = "WaypointActivity"
+private const val VERY_SHORT_DELAY = 500 // 2 seconds
 
 class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnMapReadyCallback, View.OnClickListener, TextureView.SurfaceTextureListener{
 
@@ -138,9 +139,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private var recordedCoordinates: MutableList<LatLng> = mutableListOf()
     private var gimbalAngle: Float = 0f
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Log.d(TAG,"Initializing Waypoint Activity")
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token)) // this will get your mapbox instance using your access token
         setContentView(R.layout.activity_waypoint1) // use the waypoint1 activity layout
 
@@ -272,6 +274,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 }
             }
         } else {
+            Log.d(TAG,"Tried but, cannot Add Waypoint with onMapClick")
             setResultToToast("Cannot Add Waypoint")
         }
         return true
@@ -362,6 +365,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                     recordedwaypointList.add(newwayPt)
                 }
                 Thread.sleep(2000)
+                Log.d(TAG,"Recorded waypoints: ${recordedwaypointList.size.toString()}")
                 setResultToToast(recordedwaypointList.size.toString())
             }
         }.start()
@@ -379,13 +383,13 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //        var segments = ""
 //        val gpxdate = SimpleDateFormat("yyyy-MM-dd")
 //        val gpxcurrentDate = gpxdate.format(Date()).toString()
-//        val gpxtime = SimpleDateFormat("hh:mm:ss")
+//        val gpxtime = SimpleDateFormat("HH:mm:ss")
 //        val gpxcurrentTime = gpxtime.format(Date()).toString()
 //        for (location in points) {
 //            segments += "<wpt lat=\"${location.latitude}\" lon=\"${location.longitude}\"><ele>${location.altitude}</ele><time>${gpxcurrentDate}T${gpxcurrentTime}Z</time><desc>0</desc></wpt>\n"
 //        }
 //        val footer = "</gpx>"
-//        val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
+//        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
 //        val currentDateandTime = sdf.format(Date()).toString() + ".gpx"
 //        val mydir = File(Environment.getExternalStoragePublicDirectory(
 //            Environment.DIRECTORY_DOCUMENTS),
@@ -405,6 +409,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //                it.write(footer.toByteArray())
 //                it.flush()
 //                it.close()
+//                Log.d(TAG,"GPX file saved")
 //                setResultToToast("GPX file saved")}
 //
 //        } catch (e: IOException) {
@@ -424,12 +429,12 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         var segments = ""
         val gpxdate = SimpleDateFormat("yyyy-MM-dd")
         val gpxcurrentDate = gpxdate.format(Date()).toString()
-        val gpxtime = SimpleDateFormat("hh:mm:ss")
+        val gpxtime = SimpleDateFormat("HH:mm:ss")
         val gpxcurrentTime = gpxtime.format(Date()).toString()
         for (location in points) {
             segments += "<wpt lat=\"${location.coordinate.latitude}\" lon=\"${location.coordinate.longitude}\"><ele>${location.altitude}</ele><time>${gpxcurrentDate}T${gpxcurrentTime}Z</time><desc>${location.heading}</desc></wpt>\n"        }
         val footer = "</gpx>"
-        val sdf = SimpleDateFormat("yyyy_MM_dd_hh_mm_ss")
+        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
         val currentDateandTime = sdf.format(Date()).toString() + "_yaw.gpx"
         val mydir = File(Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOCUMENTS),
@@ -449,6 +454,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 it.write(footer.toByteArray())
                 it.flush()
                 it.close()
+                Log.d(TAG,"GPX file saved with yaw")
                 setResultToToast("GPX file saved with yaw")}
         } catch (e: IOException) {
             e.printStackTrace()
@@ -469,6 +475,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 track.removeAt(i)
             i++
         }
+        Log.d(TAG,"Cleaned waypoints")
         setResultToToast(track.size.toString())
         waypointMissionBuilder?.waypointList?.clear()
         mapboxMap?.removeAnnotations()
@@ -506,13 +513,21 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                         builder.waypointList(waypointList).waypointCount(waypointList.size) }
                 }
             }
-            if (waypointMissionBuilder != null)
+            if (waypointMissionBuilder != null){
+                Log.d(TAG,"Mission created")
                 setResultToToast("Mission created")
-            else
+            }
+            else{
+                Log.d(TAG,"Failed to create mission")
                 setResultToToast("Failed to create mission")
+            }
+
         }
-        else
+        else{
+            Log.d(TAG,"Failed to create mission")
             setResultToToast("Failed to create mission")
+        }
+
         return waypointList
     }
 
@@ -531,6 +546,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY)
                 isGimbalPitchRotationEnabled = true
             }
+            Log.d(TAG,"Mission builder was null")
             setResultToToast("Mission builder was null")
         }
         else
@@ -563,24 +579,32 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 getWaypointMissionOperator()?.let { operator ->
                     val error = operator.loadMission(builder.build()) // load the mission
                     if (error == null) {
+                        Log.d(TAG,"loadWaypoint succeeded")
                         setResultToToast("loadWaypoint succeeded")
                     } else {
+                        Log.d(TAG,"loadWaypoint failed " + error.description)
                         setResultToToast("loadWaypoint failed " + error.description)
                     }
                 }
             }
-            else
+            else{
+                Log.d(TAG,"loadWaypoint failed, not enough builder")
                 setResultToToast("loadWaypoint failed, not enough builder")
+            }
         }
     }
 
     private fun uploadWaypointMission() { // upload the mission
-        if (getWaypointMissionOperator() == null)
+        if (getWaypointMissionOperator() == null){
+            Log.d(TAG,"waypointmission null")
             setResultToToast("waypointmission null")
+        }
         getWaypointMissionOperator()!!.uploadMission { error ->
             if (error == null) {
+                Log.d(TAG,"Mission upload successfully!")
                 setResultToToast("Mission upload successfully!")
             } else {
+                Log.d(TAG,"Mission upload failed")
                 setResultToToast("Mission upload failed")
             }
         }
@@ -589,6 +613,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private fun startWaypointMission() { // start mission
         val angle = gimbalBtn.value
         getWaypointMissionOperator()?.startMission(angle) {error ->
+            Log.d(TAG,"Mission Start: " + if (error == null) "Successfully" else error.description)
             setResultToToast("Mission Start: " + if (error == null) "Successfully" else error.description)
         }
     }
@@ -596,6 +621,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private fun stopWaypointMission() { // stop mission
         waypointMissionBuilder?.autoFlightSpeed(0.0F)
         getWaypointMissionOperator()?.stopMission { error ->
+            Log.d(TAG,"Mission Stop: " + if (error == null) "Successfully" else error.description)
             setResultToToast("Mission Stop: " + if (error == null) "Successfully" else error.description)
         }
     }
@@ -603,6 +629,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private fun forceStopWaypointMission() { // stop mission
         waypointMissionBuilder?.autoFlightSpeed(0.0F)
         getWaypointMissionOperator()?.forceStopMission { error ->
+            Log.d(TAG,"Mission Stop: " + if (error == null) "Successfully" else error.description)
             setResultToToast("Mission Stop: " + if (error == null) "Successfully" else error.description)
         }
     }
@@ -627,6 +654,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
                     override fun onSuccess(information: FlatCameraMode) {
                         currentCMode = information
+                        Log.d(TAG,"Current Camera Mode $information")
 //                        setResultToToast("Camera Mode $information")
                     }
                     override fun onFailure(djiError: DJIError) {
@@ -637,9 +665,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         if (currentCMode!=SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL){
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
                 if (error == null) {
+                    Log.d(TAG,"Switch Camera Mode to VIDEO_NORMAL Succeeded")
     //                setResultToToast("Switch Camera Mode Succeeded")
                 } else {
-                    setResultToToast("Switch Camera Error: ${error.description}")
+                    Log.d(TAG,"Switch Camera to VIDEO_NORMAL Error: ${error.description}")
+                    setResultToToast("Switch Camera to VIDEO_NORMAL Error: ${error.description}")
                 }
             }
             Thread.sleep(500)
@@ -647,8 +677,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
         camera.startRecordVideo {
             if (it == null) {
+                Log.d(TAG,"Record Video: Success")
                 setResultToToast("Record Video: Success")
             } else {
+                Log.d(TAG,"Record Video Error: ${it.description}")
                 setResultToToast("Record Video Error: ${it.description}")
             }
         }
@@ -664,8 +696,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         */
         camera.stopRecordVideo {
             if (it == null) {
+                Log.d(TAG,"Stop Recording: Success")
                 setResultToToast("Stop Recording: Success")
             } else {
+                Log.d(TAG,"Stop Recording: Error ${it.description}")
                 setResultToToast("Stop Recording: Error ${it.description}")
             }
         }
@@ -680,8 +714,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         */
         camera.stopShootPhoto {
             if (it == null) {
+                Log.d(TAG,"Stop taking photos.")
                 setResultToToast("Stop taking photos.")
             } else {
+                Log.d(TAG,"Stop Interval Photo Capture Error: ${it.description}")
                 setResultToToast("Stop Interval Photo Capture Error: ${it.description}")
             }
         }
@@ -699,7 +735,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
             override fun onSuccess(information: FlatCameraMode) {
                 currentCMode = information
-//                        setResultToToast("Camera Mode $information")
+                Log.d(TAG,"current Camera Mode $information")
+//                setResultToToast("Camera Mode $information")
             }
             override fun onFailure(djiError: DJIError) {
             }
@@ -708,9 +745,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         if(currentCMode!=SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
                 if (error == null) {
+                    Log.d(TAG,"Switch Camera Mode to PHOTO_SINGLE Succeeded")
 //                setResultToToast("Switch Camera Mode Succeeded")
                 } else {
-                    setResultToToast("Switch Camera Error: ${error.description}")
+                    Log.d(TAG,"Switch Camera to PHOTO_SINGLE Error: ${error.description}")
+                    setResultToToast("Switch Camera PHOTO_SINGLE Error: ${error.description}")
                 }
             }
             Thread.sleep(500)
@@ -718,8 +757,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
         camera.startShootPhoto {
             if (it == null) {
+                Log.d(TAG,"Photo taken.")
                 setResultToToast("Photo taken.")
             } else {
+                Log.d(TAG,"Photo Capture Error: ${it.description}")
                 setResultToToast("Photo Capture Error: ${it.description}")
             }
         }
@@ -732,7 +773,8 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
             override fun onSuccess(information: FlatCameraMode) {
                 currentCMode = information
-//                        setResultToToast("Camera Mode $information")
+                Log.d(TAG,"current Camera Mode $information")
+//                setResultToToast("Camera Mode $information")
             }
             override fun onFailure(djiError: DJIError) {
             }
@@ -741,9 +783,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         if(currentCMode==SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_INTERVAL) { error ->
                 if (error == null) {
-                    setResultToToast("Switched CameraMode: photo_interval")
+                    Log.d(TAG,"Switched CameraMode: PHOTO_INTERVAL")
+                    setResultToToast("Switched CameraMode: PHOTO_INTERVAL")
                 } else {
-                    setResultToToast("Switch Camera Error: ${error.description}")
+                    Log.d(TAG,"Switch Camera to PHOTO_INTERVAL Error: ${error.description}")
+                    setResultToToast("Switch Camera to PHOTO_INTERVAL Error: ${error.description}")
                 }
             }
             Thread.sleep(500)
@@ -758,9 +802,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             }
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
                 if (error == null) {
-                    setResultToToast("Switched CameraMode: video_normal")
+                    Log.d(TAG,"Switched CameraMode: VIDEO_NORMAL")
+                    setResultToToast("Switched CameraMode: VIDEO_NORMAL")
                 } else {
-                    setResultToToast("Switch Camera Error: ${error.description}")
+                    Log.d(TAG,"Switch Camera to VIDEO_NORMAL Error: ${error.description}")
+                    setResultToToast("Switch Camera to VIDEO_NORMAL Error: ${error.description}")
                 }
             }
             Thread.sleep(500)
@@ -775,9 +821,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             }
             camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
                 if (error == null) {
-                    setResultToToast("Switched CameraMode: photo_single")
+                    Log.d(TAG,"Switched CameraMode: PHOTO_SINGLE")
+                    setResultToToast("Switched CameraMode: PHOTO_SINGLE")
                 } else {
-                    setResultToToast("Switch Camera Error: ${error.description}")
+                    Log.d(TAG,"Switch Camera to PHOTO_SINGLE Error: ${error.description}")
+                    setResultToToast("Switch Camera to PHOTO_SINGLE Error: ${error.description}")
                 }
             }
             Thread.sleep(500)
@@ -792,6 +840,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
             override fun onSuccess(information: FlatCameraMode) {
                 currentCMode = information
+                Log.d(TAG,"Current Camera Mode $information")
 //                        setResultToToast("Camera Mode $information")
             }
             override fun onFailure(djiError: DJIError) {
@@ -801,8 +850,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         if(currentCMode==SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
             camera.startShootPhoto {
                 if (it == null) {
+                    Log.d(TAG,"Photo taken.")
                     setResultToToast("Photo taken.")
                 } else {
+                    Log.d(TAG,"Photo Capture Error: ${it.description}")
                     setResultToToast("Photo Capture Error: ${it.description}")
                 }
             }
@@ -811,8 +862,10 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             if(cameraActionBtn.text==cameraActionBtnTxt_interval_false){
                 camera.startShootPhoto {
                     if (it == null) {
+                        Log.d(TAG,"Started taking photos.")
                         setResultToToast("Started taking photos.")
                     } else {
+                        Log.d(TAG,"Interval Photo Capture Error: ${it.description}")
                         setResultToToast("Interval Photo Capture Error: ${it.description}")
                     }
                 }
@@ -844,6 +897,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
         //if DJI product is disconnected, alert the user
         if (!product.isConnected) {
+            Log.d(TAG,getString(R.string.disconnected))
             setResultToToast(getString(R.string.disconnected))
         } else {
             /*
@@ -888,7 +942,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-
+        Log.d(TAG,"Reading GPX file.")
         if (requestCode == 111 && resultCode == RESULT_OK) {
             val selectedFile = data?.data // The URI with the location of the file
             var gpxfile = File(Environment.getExternalStoragePublicDirectory(
@@ -904,7 +958,9 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             }
             val parser = GPXParser() // consider injection
             try {
+                Log.d(TAG,"Reading GPX file.")
                 val inputStream: InputStream = File(gpxfile.path).inputStream()
+                Log.d(TAG,"Parsing GPX file.")
                 val parsedGpx: Gpx? = parser.parse(inputStream) // consider using a background thread
                 recordedwaypointList.clear()
                 parsedGpx?.let {
@@ -918,15 +974,22 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                         recordedwaypointList.add(newwayPt)
                     }
                 } ?: {
+                    Log.d(TAG,"Error at parsing")
                     setResultToToast("Error at parsing")
                 }
             } catch (e: IOException) {
                 // do something with this exception
-                e.message?.let { setResultToToast(it) }
+                e.message?.let {
+                    Log.d(TAG,it)
+                    setResultToToast(it)
+                }
                 e.printStackTrace()
             } catch (e: XmlPullParserException) {
                 // do something with this exception
-                e.message?.let { setResultToToast(it) }
+                e.message?.let {
+                    Log.d(TAG,it)
+                    setResultToToast(it)
+                }
                 e.printStackTrace()
             }
         }
@@ -942,12 +1005,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         var style = mapboxMap?.getStyle()?.uri
 //                if (style.toString() == style_string_sat){
         if (style.toString().contains(style_string_sat)){
+            Log.d(TAG,"Changing style to street")
             setResultToToast("Changing style to street")
             mapboxMap?.setStyle(style_street) { // set the view of the map
             }
         }
         else{
 //                    setResultToToast(style.toString())
+            Log.d(TAG,"Changing style to satellite")
             setResultToToast("Changing style to satellite")
             mapboxMap?.setStyle(style_sat) { // set the view of the map
             }
@@ -957,6 +1022,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private fun changeGimbalAngle(){
         gimbalBtn.requestFocus()
         gimbalAngle = gimbalBtn.value
+        Log.d(TAG,"New gimbal angle set: $gimbalAngle")
 //        setResultToToast("New gimbal angle set: $gimbalAngle")
         getWaypointMissionOperator()?.rotateGimbal(gimbalAngle)
     }
@@ -966,9 +1032,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             R.id.locate -> { // will draw the drone and move camera to the position of the drone on the map
                 updateDroneLocation()
                 cameraUpdate()
+                Log.d(TAG,"$droneLocationLat update $droneLocationLng")
                 setResultToToast("$droneLocationLat update $droneLocationLng")
             }
             R.id.start -> {
+                startland.text="LAND"
                 //coordinateList.add("recording started")
                 //start.isPressed = true
                 if(stopButtonPressed) stopButtonPressed = false
@@ -977,6 +1045,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
             }
             R.id.stop -> {
+                startland.text="LAND"
                 if (!stopButtonPressed) stopButtonPressed = true
                 //showRecordedWaypoints(recordedCoordinates)
                 //val copyingStrignBufferGPS = stringBufferGPS
@@ -985,6 +1054,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //                recordToGPX(fromWaypointListToLatLngList(recordedwaypointList))
                 recordToGPXyaw(recordedwaypointList)
                 //mutableGeoJson = mutableListOf()
+                Log.d(TAG,"Route coordinates:" + recordedwaypointList.size.toString())
                 setResultToToast("Route coordinates:" + recordedwaypointList.size.toString())
             }
             R.id.showTrack -> {
@@ -1006,6 +1076,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 uploadWaypointMission()
             }
             R.id.start_mission-> {
+                startland.text="LAND"
                 startWaypointMission()
             }
 
@@ -1014,10 +1085,20 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 //            }
 
             R.id.forceStop -> {
+                startland.text="LAND"
                 forceStopWaypointMission()
             }
             R.id.btn_startland -> {
-                getWaypointMissionOperator()?.landing(null)
+                if(startland.text=="LAND"){
+                    getWaypointMissionOperator()?.landing(null)
+                    startland.text="LANDING"
+                }
+                else{
+                    getWaypointMissionOperator()?.cancellanding(null)
+                    startland.text="LAND"
+                }
+
+
             }
             R.id.btn_opengpx -> {
                 val intent = Intent()
@@ -1050,6 +1131,7 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         override fun onExecutionUpdate(executionEvent: WaypointMissionExecutionEvent) {}
         override fun onExecutionStart() {}
         override fun onExecutionFinish(error: DJIError?) {
+            Log.d(TAG,"Execution finished: " + if (error == null) "Success!" else error.description)
             setResultToToast("Execution finished: " + if (error == null) "Success!" else error.description)
         }
     }
@@ -1129,6 +1211,4 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         uninitPreviewer()
         super.onPause()
     }
-
-
 }
