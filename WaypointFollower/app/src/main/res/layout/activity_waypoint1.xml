@@ -173,24 +173,39 @@
                 android:valueTo="0.0"
                 android:stepSize="1.0"
                 />
+<!--            <Button-->
+<!--                android:id="@+id/btn_capture"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_weight="1"-->
+<!--                android:text="Photo"-->
+<!--                android:textSize="12sp" />-->
+<!--            <ToggleButton-->
+<!--                android:id="@+id/btn_record"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_weight="1"-->
+<!--                android:checked="false"-->
+<!--                android:text="Video"-->
+<!--                android:textOff="Record"-->
+<!--                android:textOn="Recording"-->
+<!--                android:textSize="20dp" />-->
             <Button
-                android:id="@+id/btn_capture"
+                android:id="@+id/btn_cameraMode"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Photo"
                 android:textSize="12sp" />
-
-            <ToggleButton
-                android:id="@+id/btn_record"
+            <Button
+                android:id="@+id/btn_cameraAction"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:checked="false"
-                android:text="Video"
-                android:textOff="Record"
-                android:textOn="Recording"
-                android:textSize="20dp" />
+                android:text="Capture"
+                android:textSize="12sp" />
+
+
         </LinearLayout>
 
     </LinearLayout>

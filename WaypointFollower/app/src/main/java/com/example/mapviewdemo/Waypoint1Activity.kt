@@ -80,13 +80,15 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
     private var codecManager: DJICodecManager? = null //handles the encoding and decoding of video data
 
     private lateinit var videoSurface: TextureView //Used to display the DJI product's camera video stream
-    private lateinit var captureBtn: Button
+//    private lateinit var captureBtn: Button
     private lateinit var mapStyleBtn: Button
 //    private lateinit var shootPhotoModeBtn: Button
 //    private lateinit var recordVideoModeBtn: Button
-    private lateinit var recordBtn: ToggleButton
+//    private lateinit var recordBtn: ToggleButton
 //    private lateinit var recordingTime: TextView
     private lateinit var gimbalBtn: Slider
+    private lateinit var cameraModeBtn: Button
+    private lateinit var cameraActionBtn: Button
 
     companion object {
         const val TAG = "Waypoint1Activity"
@@ -97,6 +99,11 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
     val gpxFolder = "Recordings_DJI/"
+    val cameraActionBtnTxt_photo = "Take1"
+    val cameraActionBtnTxt_interval_false = "TakeMany"
+    val cameraActionBtnTxt_interval_true = "Shooting"
+    val cameraActionBtnTxt_video_false = "Record"
+    val cameraActionBtnTxt_video_true = "Recording"
     val EARTH_RADIUS_METERS: Double = 6371.0*1000
 
     private var isAdd = false
@@ -212,26 +219,29 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
 
         videoSurface = findViewById(R.id.video_previewer_surface)
 //        recordingTime = findViewById(R.id.timer)
-        captureBtn = findViewById(R.id.btn_capture)
-        recordBtn = findViewById(R.id.btn_record)
+//        captureBtn = findViewById(R.id.btn_capture)
+//        recordBtn = findViewById(R.id.btn_record)
 //        shootPhotoModeBtn = findViewById(R.id.btn_shoot_photo_mode)
 //        recordVideoModeBtn = findViewById(R.id.btn_record_video_mode)
-
+        cameraModeBtn = findViewById(R.id.btn_cameraMode)
+        cameraActionBtn = findViewById(R.id.btn_cameraAction)
+        cameraModeBtn.setOnClickListener(this)
+        cameraActionBtn.setOnClickListener(this)
         videoSurface.surfaceTextureListener = this
 
-        captureBtn.setOnClickListener(this)
+//        captureBtn.setOnClickListener(this)
 //        shootPhotoModeBtn.setOnClickListener(this)
 //        recordVideoModeBtn.setOnClickListener(this)
 
 //        recordingTime.visibility = View.VISIBLE
 
-        recordBtn.setOnCheckedChangeListener { buttonView, isChecked ->
-            if (isChecked) {
-                startRecord()
-            } else {
-                stopRecord()
-            }
-        }
+//        recordBtn.setOnCheckedChangeListener { buttonView, isChecked ->
+//            if (isChecked) {
+//                startRecord()
+//            } else {
+//                stopRecord()
+//            }
+//        }
     }
 
 
@@ -661,6 +671,23 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
         }
     }
 
+    private fun stopShootingInterval() {
+        val camera = getCameraInstance() ?: return //get camera instance or null if it doesn't exist
+
+        /*
+        stops the camera video recording and receives a callback. If the callback returns an error that
+        is null, the operation is successful.
+        */
+        camera.stopShootPhoto {
+            if (it == null) {
+                setResultToToast("Stop taking photos.")
+            } else {
+                setResultToToast("Stop Interval Photo Capture Error: ${it.description}")
+            }
+        }
+
+    }
+
     private fun captureAction() {
         val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
 
@@ -696,13 +723,117 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
                 setResultToToast("Photo Capture Error: ${it.description}")
             }
         }
-//        camera.stopShootPhoto {
-//            if (it == null) {
-////                setResultToToast("Photo Capture Stop: Success")
-//            } else {
-//                setResultToToast("Photo Capture Stop Error: ${it.description}")
-//            }
-//        }
+
+    }
+
+    private fun changeCameraMode() {
+        val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
+        var currentCMode = SettingsDefinitions.FlatCameraMode.UNKNOWN
+        camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
+            override fun onSuccess(information: FlatCameraMode) {
+                currentCMode = information
+//                        setResultToToast("Camera Mode $information")
+            }
+            override fun onFailure(djiError: DJIError) {
+            }
+        })
+        Thread.sleep(10)
+        if(currentCMode==SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
+            camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_INTERVAL) { error ->
+                if (error == null) {
+                    setResultToToast("Switched CameraMode: photo_interval")
+                } else {
+                    setResultToToast("Switch Camera Error: ${error.description}")
+                }
+            }
+            Thread.sleep(500)
+            cameraModeBtn.text="Interval"
+            cameraActionBtn.text=cameraActionBtnTxt_interval_false
+        }
+        if(currentCMode==SettingsDefinitions.FlatCameraMode.PHOTO_INTERVAL){
+            if(cameraActionBtn.text==cameraActionBtnTxt_interval_true){
+                stopShootingInterval()
+                Thread.sleep(500)
+                cameraActionBtn.text=cameraActionBtnTxt_interval_false
+            }
+            camera.setFlatMode(SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL) { error ->
+                if (error == null) {
+                    setResultToToast("Switched CameraMode: video_normal")
+                } else {
+                    setResultToToast("Switch Camera Error: ${error.description}")
+                }
+            }
+            Thread.sleep(500)
+            cameraModeBtn.text="Video"
+            cameraActionBtn.text=cameraActionBtnTxt_video_false
+        }
+        if(currentCMode==SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL){
+            if(cameraActionBtn.text==cameraActionBtnTxt_video_true){
+                stopRecord()
+                Thread.sleep(500)
+                cameraActionBtn.text=cameraActionBtnTxt_video_false
+            }
+            camera.setFlatMode(SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE) { error ->
+                if (error == null) {
+                    setResultToToast("Switched CameraMode: photo_single")
+                } else {
+                    setResultToToast("Switch Camera Error: ${error.description}")
+                }
+            }
+            Thread.sleep(500)
+            cameraModeBtn.text="Photo"
+            cameraActionBtn.text=cameraActionBtnTxt_photo
+        }
+    }
+
+    private fun cameraAction() {
+        val camera = getCameraInstance() ?:return //get camera instance or null if it doesn't exist
+        var currentCMode = SettingsDefinitions.FlatCameraMode.UNKNOWN
+        camera.getFlatMode(object : CommonCallbacks.CompletionCallbackWith<FlatCameraMode> {
+            override fun onSuccess(information: FlatCameraMode) {
+                currentCMode = information
+//                        setResultToToast("Camera Mode $information")
+            }
+            override fun onFailure(djiError: DJIError) {
+            }
+        })
+        Thread.sleep(10)
+        if(currentCMode==SettingsDefinitions.FlatCameraMode.PHOTO_SINGLE){
+            camera.startShootPhoto {
+                if (it == null) {
+                    setResultToToast("Photo taken.")
+                } else {
+                    setResultToToast("Photo Capture Error: ${it.description}")
+                }
+            }
+        }
+        if(currentCMode==SettingsDefinitions.FlatCameraMode.PHOTO_INTERVAL){
+            if(cameraActionBtn.text==cameraActionBtnTxt_interval_false){
+                camera.startShootPhoto {
+                    if (it == null) {
+                        setResultToToast("Started taking photos.")
+                    } else {
+                        setResultToToast("Interval Photo Capture Error: ${it.description}")
+                    }
+                }
+                cameraActionBtn.text=cameraActionBtnTxt_interval_true
+            }
+            else{
+                stopShootingInterval()
+                cameraActionBtn.text=cameraActionBtnTxt_interval_false
+            }
+        }
+        if(currentCMode==SettingsDefinitions.FlatCameraMode.VIDEO_NORMAL){
+            if(cameraActionBtn.text==cameraActionBtnTxt_video_false){
+                startRecord()
+                cameraActionBtn.text=cameraActionBtnTxt_video_true
+            }
+            else{
+                stopRecord()
+                cameraActionBtn.text=cameraActionBtnTxt_video_false
+            }
+        }
+
     }
 
     //Function that initializes the display for the videoSurface TextureView
@@ -897,8 +1028,14 @@ class Waypoint1Activity : AppCompatActivity(), MapboxMap.OnMapClickListener, OnM
             R.id.btn_mapstyle -> {
                 changeMapStyle()
             }
-            R.id.btn_capture -> {
-                captureAction()
+//            R.id.btn_capture -> {
+//                captureAction()
+//            }
+            R.id.btn_cameraMode -> {
+                changeCameraMode()
+            }
+            R.id.btn_cameraAction -> {
+                cameraAction()
             }
         }
     }

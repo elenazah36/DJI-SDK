@@ -92,6 +92,7 @@ public class ObjectDetectionActivity extends AbstractCameraXActivity<ObjectDetec
             Log.e("Object Detection", "Error reading assets", e);
             return null;
         }
+//        DJIVideoStreamDecoder.getInstance().changeSurface(holder.getSurface());
         Bitmap bitmap = imgToBitmap(image.getImage());
         Matrix matrix = new Matrix();
         matrix.postRotate(90.0f);
