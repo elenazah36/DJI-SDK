@@ -153,7 +153,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         final Button buttonLive = findViewById(R.id.liveButton);
         buttonLive.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-              final Intent intent = new Intent(MainActivity.this, ObjectDetectionActivity.class);
+              final Intent intent = new Intent(MainActivity.this, ObjectDetectionActivity_dji.class);
               startActivity(intent);
             }
         });

@@ -107,3 +107,6 @@
 -keep class android.arch.** { *; }
 -dontwarn android.arch.**
 -ignorewarnings
+
+-keep class org.pytorch.** {*;}
+-keep class com.facebook.** {*;}

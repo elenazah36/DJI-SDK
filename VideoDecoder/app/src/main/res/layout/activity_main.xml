@@ -98,6 +98,6 @@
         android:visibility="invisible"
         android:scrollbars="vertical"
         android:gravity="bottom"
-        />
+        tools:ignore="NotSibling" />
 
 </RelativeLayout>

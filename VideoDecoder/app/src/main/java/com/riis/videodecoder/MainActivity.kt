@@ -2,16 +2,7 @@ package com.riis.videodecoder
 
 import android.app.Activity
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Rect
-import android.graphics.RectF
-import android.graphics.SurfaceTexture
-import android.graphics.YuvImage
+import android.graphics.*
 import android.media.MediaFormat
 import android.os.*
 import android.util.Log
@@ -34,7 +25,6 @@ import dji.sdk.camera.Camera
 import dji.sdk.camera.VideoFeeder
 import dji.sdk.codec.DJICodecManager
 import dji.sdk.sdkmanager.DJISDKManager
-
 import org.pytorch.IValue
 import org.pytorch.LiteModuleLoader
 import org.pytorch.Module
@@ -42,7 +32,6 @@ import org.pytorch.Tensor
 import org.pytorch.torchvision.TensorImageUtils
 import java.io.*
 import java.nio.ByteBuffer
-
 
 
 class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
@@ -83,19 +72,41 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     private var videoViewHeight = 0
     private var count = 0
 
-    private var module = Module.load(assetFilePath(this, "yolov5s.torchscript.ptl"))
+//    private var module = LiteModuleLoader.load(assetFilePath(this, "yolov5s.torchscript.ptl"))
+    private var module: Module? = null
 
+    private fun loadModel(){
+        Log.d(TAG,"Loading Model")
+        val fileName = assetFilePath(this, "yolov5s.torchscript.ptl")
+//        setResultToToast("the file path: $fileName")
+        var file = File(fileName)
+        var fileExists = file.exists()
+
+        if(fileExists){
+            Log.i(TAG,"$fileName exists.")
+//            setResultToToast("$fileName exists.")
+        } else {
+            Log.e(TAG,"$fileName does not exist.")
+//            setResultToToast("$fileName does not exist.")
+        }
+        try{
+            Log.d(TAG,"Trying to load model.")
+            module = LiteModuleLoader.load(fileName)
+            Log.i(TAG,"Module loaded from :$fileName")
+            setResultToToast("Module loaded from :$fileName")
+        }catch (e: Exception){Log.e(TAG, "Error loading the model: $e")}
+    }
     override fun onResume() {
-        setResultToToast("onResume")
-        runOnUiThread { Toast.makeText(this, "onResume", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("onResume")
+//        runOnUiThread { Toast.makeText(this, "onResume", Toast.LENGTH_SHORT).show() }
         super.onResume()
         initSurfaceOrTextureView()
         notifyStatusChange()
     }
 
     private fun initSurfaceOrTextureView() {
-        setResultToToast("initSurfaceOrTextureView")
-        runOnUiThread { Toast.makeText(this, "initSurfaceOrTextureView", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("initSurfaceOrTextureView")
+//        runOnUiThread { Toast.makeText(this, "initSurfaceOrTextureView", Toast.LENGTH_SHORT).show() }
         when (demoType) {
             DemoType.USE_SURFACE_VIEW -> initPreviewerSurfaceView()
             DemoType.USE_SURFACE_VIEW_DEMO_DECODER -> {
@@ -115,8 +126,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     override fun onPause() {
-        setResultToToast("onPause")
-        runOnUiThread { Toast.makeText(this, "onPause", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("onPause")
+//        runOnUiThread { Toast.makeText(this, "onPause", Toast.LENGTH_SHORT).show() }
         if (mCamera != null) {
             VideoFeeder.getInstance().primaryVideoFeed
                 .removeVideoDataListener(mReceivedVideoDataListener)
@@ -126,8 +137,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     override fun onDestroy() {
-        setResultToToast("onDestroy")
-        runOnUiThread { Toast.makeText(this, "onDestroy", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("onDestroy")
+//        runOnUiThread { Toast.makeText(this, "onDestroy", Toast.LENGTH_SHORT).show() }
         if (mCodecManager != null) {
             mCodecManager!!.cleanSurface()
             mCodecManager!!.destroyCodec()
@@ -136,9 +147,10 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setResultToToast("OnCreate")
-        runOnUiThread { Toast.makeText(this, "OnCreate", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("OnCreate")
+//        runOnUiThread { Toast.makeText(this, "OnCreate", Toast.LENGTH_SHORT).show() }
         super.onCreate(savedInstanceState)
+        loadModel()
         setContentView(R.layout.activity_main)
         initUi()
         if (MainActivity.isM300Product) {
@@ -166,16 +178,16 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     private fun updateTitle(s: String) {
-        setResultToToast("updateTitle")
-        runOnUiThread { Toast.makeText(this, "updateTitle", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("updateTitle")
+//        runOnUiThread { Toast.makeText(this, "updateTitle", Toast.LENGTH_SHORT).show() }
         mainHandler.sendMessage(
             mainHandler.obtainMessage(MSG_WHAT_UPDATE_TITLE, s)
         )
     }
 
     private fun initUi() {
-        setResultToToast("initUi")
-        runOnUiThread { Toast.makeText(this, "initUi", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("initUi")
+//        runOnUiThread { Toast.makeText(this, "initUi", Toast.LENGTH_SHORT).show() }
         savePath = findViewById<View>(R.id.activity_main_save_path) as TextView
         screenShot = findViewById<View>(R.id.activity_main_screen_shot) as Button
         screenShot!!.isSelected = false
@@ -200,8 +212,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     private fun updateUIVisibility() {
-        setResultToToast("updateUIVisibility")
-        runOnUiThread { Toast.makeText(this, "updateUIVisibility", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("updateUIVisibility")
+//        runOnUiThread { Toast.makeText(this, "updateUIVisibility", Toast.LENGTH_SHORT).show() }
         when (demoType) {
             DemoType.USE_SURFACE_VIEW -> {
                 videostreamPreviewSf!!.visibility = View.VISIBLE
@@ -224,8 +236,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 
     private var lastupdate: Long = 0
     private fun notifyStatusChange() {
-        setResultToToast("notifyStatusChange")
-        runOnUiThread { Toast.makeText(this, "notifyStatusChange", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("notifyStatusChange")
+//        runOnUiThread { Toast.makeText(this, "notifyStatusChange", Toast.LENGTH_SHORT).show() }
         val product: BaseProduct? = VideoDecodingApplication.productInstance
         Log.d(
             TAG,
@@ -245,7 +257,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 
         // The callback for receiving the raw H264 video data for camera live view
         mReceivedVideoDataListener =
-            VideoFeeder.VideoDataListener { videoBuffer, size ->
+            VideoFeeder.VideoDataListener {
+                    videoBuffer, size ->
                 if (System.currentTimeMillis() - lastupdate > 1000) {
                     Log.d(
                         TAG,
@@ -318,8 +331,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
      * by the camera
      */
     private fun initPreviewerTextureView() {
-        setResultToToast("initPreviewerTextureView")
-        runOnUiThread { Toast.makeText(this, "initPreviewerTextureView", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("initPreviewerTextureView")
+//        runOnUiThread { Toast.makeText(this, "initPreviewerTextureView", Toast.LENGTH_SHORT).show() }
         videostreamPreviewTtView!!.surfaceTextureListener = object :
             TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(
@@ -367,8 +380,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
      * Init a surface view for the DJIVideoStreamDecoder
      */
     private fun initPreviewerSurfaceView() {
-        setResultToToast("initPreviewerSurfaceView")
-        runOnUiThread { Toast.makeText(this, "initPreviewerSurfaceView", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("initPreviewerSurfaceView")
+//        runOnUiThread { Toast.makeText(this, "initPreviewerSurfaceView", Toast.LENGTH_SHORT).show() }
         videostreamPreviewSh = videostreamPreviewSf!!.holder
         surfaceCallback = object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
@@ -437,8 +450,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 
     @Throws(IOException::class)
     fun assetFilePath(context: Context, assetName: String?): String? {
-        runOnUiThread { Toast.makeText(this, "loading model", Toast.LENGTH_SHORT).show() }
-        Thread.sleep(20000)
+//        runOnUiThread { Toast.makeText(this, "loading model", Toast.LENGTH_SHORT).show() }
+        Thread.sleep(1000)
         val file = File(context.filesDir, assetName)
         if (file.exists() && file.length() > 0) {
             return file.absolutePath
@@ -464,60 +477,94 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         width: Int,
         height: Int
     ) {
+        Log.d(TAG, "YUV data received")
+//        setResultToToast("YUV data received")
 
         // Convert the YUV data ByteBuffer to a byte array
+        Log.d(TAG, "Convert the YUV data ByteBuffer to a byte array")
         val yuvData = ByteArray(dataSize)
         yuvFrame?.get(yuvData)
 
         // Create a YuvImage object from the YUV data
-        val yuvImage = YuvImage(yuvData, format.getInteger(MediaFormat.KEY_COLOR_FORMAT), width, height, null)
+        Log.d(TAG, "Create a YuvImage object from the YUV data")
+        var yuvImage: YuvImage? = null
+        try{
+            yuvImage = YuvImage(yuvData, ImageFormat.NV21, width, height, null)
+        }catch (e: Exception){Log.e(TAG, "Error creating a YuvImage object from the YUV data: $e")}
 
         // Convert the YuvImage to a ByteArrayOutputStream
+        Log.d(TAG, "Convert the YuvImage to a ByteArrayOutputStream")
         val outputStream = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, outputStream)
-
+        if (yuvImage != null) {
+            try {
+                yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, outputStream)
+            }catch (e: Exception){Log.e(TAG, "Error converting the YuvImage to a ByteArrayOutputStream: $e")}
+        }
         // Convert the ByteArrayOutputStream to a byte array
+        Log.d(TAG, "Convert the ByteArrayOutputStream to a byte array")
         val jpegByteArray = outputStream.toByteArray()
-
         // Create a Bitmap from the byte array
+        Log.d(TAG, "Create a Bitmap from the byte array")
         val bitmap = BitmapFactory.decodeByteArray(jpegByteArray, 0, jpegByteArray.size)
-
         // Bitmap for further processing or display
-        performObjectDetection(bitmap, module)
-
-
+        Log.d(TAG, "Bitmap for further processing or display")
+//        module?.let { performObjectDetection(bitmap, it) }
+        module?.let { performObjectDetection(bitmap, it) }
+//        performObjectDetection(bitmap, LiteModuleLoader.load(assetFilePath(this, "yolov5s.torchscript.ptl")))
     }
 
-    fun performObjectDetection(bitmap: Bitmap, model: Module): List<DetectedObject> {
-        setResultToToast("performObjectDetection")
-        runOnUiThread { Toast.makeText(this, "performObjectDetection", Toast.LENGTH_SHORT).show() }
+    fun performObjectDetection(bitmap: Bitmap, model: Module): List<DetectedObject>? {
+//        setResultToToast("performObjectDetection")
+//        runOnUiThread { Toast.makeText(this, "performObjectDetection", Toast.LENGTH_SHORT).show() }
         // Preprocess the input image
+        Log.d(TAG, "Detecting Object")
+        Log.d(TAG, "Create Scaled Bitmap")
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap,
             INPUT_IMAGE_SIZE,
             INPUT_IMAGE_SIZE, false)
+        Log.d(TAG, "Rotate Bitmap")
         val rotatedBitmap = rotateBitmap(resizedBitmap, 90f) // Adjust rotation if needed
-        val normalizedTensor = preprocessImage(rotatedBitmap)
-
+        Log.d(TAG, "Scaling rotated bitmap")
+        val resizedrotatedBitmap = Bitmap.createScaledBitmap(rotatedBitmap,
+            INPUT_IMAGE_SIZE,
+            INPUT_IMAGE_SIZE, false)
+        Log.d(TAG, "normalizing tensor")
+        val normalizedTensor = TensorImageUtils.bitmapToFloat32Tensor(resizedrotatedBitmap, TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
+            TensorImageUtils.TORCHVISION_NORM_STD_RGB)
+//        val normalizedTensor = preprocessImage(rotatedBitmap)
+        Log.d(TAG, "The size of the tensor: ${normalizedTensor.shape()}")
         // Run the inference
-        val outputTensor = model.forward(IValue.from(normalizedTensor)).toTensor()
+        Log.d(TAG, "Running the inference")
+
+        var ivalue: IValue = IValue.from(normalizedTensor)
+        var outputTuple: Array<IValue> = model.forward(ivalue).toTuple()
+        var outputTensor: Tensor = outputTuple[0].toTensor()
+        var outputs = outputTensor.dataAsFloatArray
+//        try{
+//            outputTensor = result.toTensor()
+//        }catch (e: Exception){Log.e(TAG, "Error running the inference: $e")}
+
 
         // Process the output tensor and extract detected objects
-        val detectedObjects = processOutputTensor(outputTensor)
 
+        Log.d(TAG, "Detecting Objects: $outputs")
+        setResultToToast("Detecting Objects: $outputs")
+        Log.d(TAG, "Extracting the detected objects")
+        val detectedObjects = outputTensor?.let { processOutputTensor(it) }
         return detectedObjects
     }
 
     private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
-        setResultToToast("rotateBitmap")
-        runOnUiThread { Toast.makeText(this, "rotateBitmap", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("rotateBitmap")
+//        runOnUiThread { Toast.makeText(this, "rotateBitmap", Toast.LENGTH_SHORT).show() }
         val matrix = Matrix()
         matrix.postRotate(degrees)
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     private fun preprocessImage(bitmap: Bitmap): Tensor {
-        setResultToToast("preprocessImage")
-        runOnUiThread { Toast.makeText(this, "preprocessImage", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("preprocessImage")
+//        runOnUiThread { Toast.makeText(this, "preprocessImage", Toast.LENGTH_SHORT).show() }
         // Resize and normalize the image
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap,
             INPUT_IMAGE_SIZE,
@@ -528,8 +575,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     private fun processOutputTensor(outputTensor: Tensor): List<DetectedObject> {
-        setResultToToast("processOutputTensor")
-        runOnUiThread { Toast.makeText(this, "processOutputTensor", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("processOutputTensor")
+//        runOnUiThread { Toast.makeText(this, "processOutputTensor", Toast.LENGTH_SHORT).show() }
         val results = mutableListOf<DetectedObject>()
 
         val outputData = outputTensor.dataAsFloatArray
@@ -585,8 +632,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 
     // Draw the bounding boxes, not used yet
     private fun drawBoundingBoxes(canvas: Canvas, detectionResults: List<DetectedObject>) {
-        setResultToToast("drawBoundingBoxes")
-        runOnUiThread { Toast.makeText(this, "drawBoundingBoxes", Toast.LENGTH_SHORT).show() }
+//        setResultToToast("drawBoundingBoxes")
+//        runOnUiThread { Toast.makeText(this, "drawBoundingBoxes", Toast.LENGTH_SHORT).show() }
         val paint = Paint()
         paint.color = Color.GREEN
         paint.style = Paint.Style.STROKE
@@ -618,7 +665,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 
     fun onClick(v: View) {
         if (v.id == R.id.activity_main_screen_shot) {
-            //smth
+            handleYUVClick()
         } else {
             var newDemoType: DemoType? = null
             if (v.id == R.id.activity_main_screen_texture) {
@@ -644,6 +691,45 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         }
     }
 
+    private fun handleYUVClick(){
+        Log.d(TAG, "Adding YUV data listener")
+        setResultToToast("Adding YUV data listener")
+        if (screenShot!!.isSelected) {
+            screenShot!!.text = "YUV Screen Shot"
+            screenShot!!.isSelected = false
+            when (demoType) {
+                DemoType.USE_SURFACE_VIEW, DemoType.USE_TEXTURE_VIEW -> {
+                    mCodecManager!!.enabledYuvData(false)
+                    mCodecManager!!.yuvDataCallback = null
+                }
+                DemoType.USE_SURFACE_VIEW_DEMO_DECODER -> {
+                    DJIVideoStreamDecoder.instance?.changeSurface(videostreamPreviewSh!!.surface)
+                    DJIVideoStreamDecoder.instance?.setYuvDataListener(null)
+                }
+                else -> {}
+            }
+            savePath!!.text = ""
+            savePath!!.visibility = View.INVISIBLE
+            stringBuilder = null
+        } else {
+            screenShot!!.text = "Live Stream"
+            screenShot!!.isSelected = true
+            when (demoType) {
+                DemoType.USE_TEXTURE_VIEW, DemoType.USE_SURFACE_VIEW -> {
+                    mCodecManager!!.enabledYuvData(true)
+                    mCodecManager!!.yuvDataCallback = this
+                }
+                DemoType.USE_SURFACE_VIEW_DEMO_DECODER -> {
+                    DJIVideoStreamDecoder.instance?.changeSurface(null)
+                    DJIVideoStreamDecoder.instance?.setYuvDataListener(this@MainActivity)
+                }
+                else -> {}
+            }
+            savePath!!.text = ""
+            savePath!!.visibility = View.VISIBLE
+        }
+    }
+
     private val isTranscodedVideoFeedNeeded: Boolean
         get() = if (VideoFeeder.getInstance() == null) {
             false
@@ -651,7 +737,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
             .isLensDistortionCalibrationNeeded
 
     companion object {
-        private val TAG = MainActivity::class.java.simpleName
+        val TAG: String = MainActivity::class.java.simpleName
         private const val MSG_WHAT_SHOW_TOAST = 0
         private const val MSG_WHAT_UPDATE_TITLE = 1
         private var demoType: DemoType? = DemoType.USE_TEXTURE_VIEW

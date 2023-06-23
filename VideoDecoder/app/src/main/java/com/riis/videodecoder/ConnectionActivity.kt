@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -11,6 +12,9 @@ import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Observer
 import dji.sdk.sdkmanager.DJISDKManager
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 /*
 This activity manages SDK registration and establishing a connection between the
@@ -31,8 +35,44 @@ class ConnectionActivity : AppCompatActivity() {
         const val TAG = "ConnectionActivity"
     }
 
+    fun logging() {
+        var logfolder = "Logs/"
+        val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss")
+        val currentDateandTime = sdf.format(Date()).toString()
+        var filename = "logcat_" + currentDateandTime + ".txt"
+        var filename_all = "logcat_" + currentDateandTime + "_all.txt"
+        val mydir = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS
+            ),
+            "$logfolder"
+        )
+        if (!mydir.exists()) {
+            mydir.mkdirs()
+        }
+        val logfile = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS
+            ),
+            "$logfolder$filename"
+        )
+        val logfileAll = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS
+            ),
+            "$logfolder$filename_all"
+        )
+        try {
+//            Runtime.getRuntime().exec("logcat -c")
+//            Thread.sleep(200)
+            Runtime.getRuntime().exec("logcat -f ${logfile.absolutePath} *:S $TAG:D ${MainActivity.TAG}:D")
+            Runtime.getRuntime().exec("logcat -f" + logfileAll.absolutePath)
+        } catch (e: Exception) {
+        }
+    }
     //Creating the Activity
     override fun onCreate(savedInstanceState: Bundle?) {
+        logging()
         super.onCreate(savedInstanceState)
 
         //inflating the activity_connection.xml layout as the activity's view
@@ -82,7 +122,7 @@ class ConnectionActivity : AppCompatActivity() {
 
         //If mBtnOpen Button is clicked on, start MainActivity (only works when button is enabled)
         mBtnOpen.setOnClickListener {
-            runOnUiThread { Toast.makeText(this, "opening", Toast.LENGTH_SHORT).show() }
+//            runOnUiThread { Toast.makeText(this, "opening", Toast.LENGTH_SHORT).show() }
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
