@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context="com.riis.videodecoder.MainActivity">
 
     <RelativeLayout
@@ -41,63 +41,85 @@
         android:layout_gravity="center"
         android:visibility="gone" />
 
-    <LinearLayout
-        android:layout_width="150dp"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@id/main_title_rl"
-        android:orientation="vertical">
-
-        <Button
-            android:id="@+id/activity_main_screen_texture"
-            android:layout_width="150dp"
-            android:layout_height="wrap_content"
-            android:text="Demo TextureView"
-            android:clickable="true"
-            android:onClick="onClick"
-            android:gravity="center"  />
-
-        <Button
-            android:id="@+id/activity_main_screen_surface_with_own_decoder"
-            android:layout_width="150dp"
-            android:layout_height="wrap_content"
-            android:text="Demo custom decoder"
-            android:clickable="true"
-            android:onClick="onClick"
-            android:gravity="center" />
-
-        <Button
-            android:id="@+id/activity_main_screen_surface"
-            android:layout_width="150dp"
-            android:layout_height="wrap_content"
-            android:text="Demo SurfaceView"
-            android:onClick="onClick"
-            android:gravity="center" />
-
-
-        <Button
-            android:id="@+id/activity_main_screen_shot"
-            android:layout_width="150dp"
-            android:layout_height="wrap_content"
-            android:text="YUV Screen Shot"
-            android:clickable="true"
-            android:onClick="onClick"
-            android:gravity="center" />
-
-    </LinearLayout>
-    <TextView
-        android:id="@+id/activity_main_save_path"
-        android:layout_width="400dp"
+    <ViewStub
+        android:id="@+id/object_detection_texture_view_stub"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="5dp"
-        android:background="@color/title_dark"
-        android:layout_toRightOf="@id/activity_main_screen_shot"
-        android:layout_alignParentRight="true"
-        android:layout_below="@id/main_title_rl"
-        android:textColor="@color/colorWhite"
-        android:visibility="invisible"
-        android:scrollbars="vertical"
-        android:gravity="bottom"
-        tools:ignore="NotSibling" />
+        android:layout="@layout/texture_view"
+        app:layout_constraintBottom_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.riis.videodecoder.ResultView
+        android:id="@+id/resultView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+<!--    <LinearLayout-->
+<!--        android:layout_width="150dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_alignParentLeft="true"-->
+<!--        android:layout_below="@id/main_title_rl"-->
+<!--        android:orientation="vertical">-->
+
+<!--        <Button-->
+<!--            android:id="@+id/activity_main_screen_texture"-->
+<!--            android:layout_width="150dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Demo TextureView"-->
+<!--            android:clickable="true"-->
+<!--            android:onClick="onClick"-->
+<!--            android:gravity="center"  />-->
+
+<!--        <Button-->
+<!--            android:id="@+id/activity_main_screen_surface_with_own_decoder"-->
+<!--            android:layout_width="150dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Demo custom decoder"-->
+<!--            android:clickable="true"-->
+<!--            android:onClick="onClick"-->
+<!--            android:gravity="center" />-->
+
+<!--        <Button-->
+<!--            android:id="@+id/activity_main_screen_surface"-->
+<!--            android:layout_width="150dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Demo SurfaceView"-->
+<!--            android:onClick="onClick"-->
+<!--            android:gravity="center" />-->
+
+
+<!--        <Button-->
+<!--            android:id="@+id/activity_main_screen_shot"-->
+<!--            android:layout_width="150dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="YUV Screen Shot"-->
+<!--            android:clickable="true"-->
+<!--            android:onClick="onClick"-->
+<!--            android:gravity="center" />-->
+
+<!--    </LinearLayout>-->
+<!--    <TextView-->
+<!--        android:id="@+id/activity_main_save_path"-->
+<!--        android:layout_width="400dp"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:padding="5dp"-->
+<!--        android:background="@color/title_dark"-->
+<!--        android:layout_toRightOf="@id/activity_main_screen_shot"-->
+<!--        android:layout_alignParentRight="true"-->
+<!--        android:layout_below="@id/main_title_rl"-->
+<!--        android:textColor="@color/colorWhite"-->
+<!--        android:visibility="invisible"-->
+<!--        android:scrollbars="vertical"-->
+<!--        android:gravity="bottom"-->
+<!--        tools:ignore="NotSibling" />-->
 
 </RelativeLayout>
+
+
+
