@@ -628,13 +628,13 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
             INPUT_IMAGE_SIZE,
             INPUT_IMAGE_SIZE, false)
         Log.d(TAG, "Rotate Bitmap")
-        val rotatedBitmap = rotateBitmap(resizedBitmap, 90f) // Adjust rotation if needed
+        val rotatedBitmap = rotateBitmap(resizedBitmap, 0f) // Adjust rotation if needed
         Log.d(TAG, "Scaling rotated bitmap")
-        val resizedrotatedBitmap = Bitmap.createScaledBitmap(rotatedBitmap,
-            INPUT_IMAGE_SIZE,
-            INPUT_IMAGE_SIZE, false)
+//        val resizedrotatedBitmap = Bitmap.createScaledBitmap(rotatedBitmap,
+//            INPUT_IMAGE_SIZE,
+//            INPUT_IMAGE_SIZE, false)
         Log.d(TAG, "normalizing tensor")
-        val normalizedTensor = TensorImageUtils.bitmapToFloat32Tensor(resizedrotatedBitmap, TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
+        val normalizedTensor = TensorImageUtils.bitmapToFloat32Tensor(resizedBitmap, TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
             TensorImageUtils.TORCHVISION_NORM_STD_RGB)
 //        val normalizedTensor = preprocessImage(rotatedBitmap)
         val shape = "The size of the tensor: (${normalizedTensor.shape().get(0)}, ${normalizedTensor.shape().get(1)}, ${normalizedTensor.shape().get(2)}, ${normalizedTensor.shape().get(3)})"
@@ -650,8 +650,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         var outputs = outputTensor.dataAsFloatArray
         Log.d(TAG, "Detected Objects: ${outputs.get(0)}")
 
-        val imgScaleX: Float = resizedrotatedBitmap.width.toFloat() / PrePostProcessor.mInputWidth
-        val imgScaleY: Float = resizedrotatedBitmap.height.toFloat() / PrePostProcessor.mInputHeight
+        val imgScaleX: Float = resizedBitmap.width.toFloat() / PrePostProcessor.mInputWidth
+        val imgScaleY: Float = resizedBitmap.height.toFloat() / PrePostProcessor.mInputHeight
         Log.d(TAG, "Image scales: $imgScaleX and $imgScaleY")
         var ivScaleX: Float = 1.0F
         var ivScaleY: Float = 1.0F

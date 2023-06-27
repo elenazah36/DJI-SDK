@@ -36,17 +36,19 @@
 
     <ViewStub
         android:id="@+id/object_detection_texture_view_stub"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="640px"
+        android:layout_height="640px"
         android:layout="@layout/texture_view"
+        android:layout_below="@id/main_title_rl"
         app:layout_constraintBottom_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.riis.videodecoder.ResultView
         android:id="@+id/resultView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="640px"
+        android:layout_height="640px"
+        android:layout_below="@id/main_title_rl"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -55,20 +57,20 @@
 
 
 
-    <TextureView
-        android:id="@+id/livestream_preview_ttv"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_centerInParent="true"
-        android:layout_gravity="center"
-        android:alpha="50"
-        android:visibility="invisible"
-        android:layout_below="@id/main_title_rl"/>
+<!--    <TextureView-->
+<!--        android:id="@+id/livestream_preview_ttv"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:layout_centerInParent="true"-->
+<!--        android:layout_gravity="center"-->
+<!--        android:alpha="50"-->
+<!--        android:visibility="invisible"-->
+<!--        android:layout_below="@id/main_title_rl"/>-->
 
     <SurfaceView
         android:id="@+id/livestream_preview_sf"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:layout_width="640px"
+        android:layout_height="640px"
         android:layout_below="@id/main_title_rl"
         android:layout_centerInParent="true"
         android:layout_gravity="center"
