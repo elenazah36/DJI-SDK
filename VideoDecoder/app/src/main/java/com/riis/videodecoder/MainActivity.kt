@@ -7,6 +7,7 @@ import android.media.MediaFormat
 import android.os.*
 import android.util.Log
 import android.view.*
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import com.riis.videodecoder.media.DJIVideoStreamDecoder
@@ -57,6 +58,8 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         }
     }
     private var videostreamPreviewTtView: TextureView? = null
+    private var textureView: TextureView? = null
+    private var mImageView: ImageView? = null
     private var videostreamPreviewSf: SurfaceView? = null
     private var videostreamPreviewSh: SurfaceHolder? = null
 
@@ -223,10 +226,12 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //        screenShot = findViewById<View>(R.id.activity_main_screen_shot) as Button
 //        screenShot!!.isSelected = false
         titleTv = findViewById<View>(R.id.title_tv) as TextView
-        videostreamPreviewTtView = findViewById<View>(R.id.livestream_preview_ttv) as TextureView
+        videostreamPreviewTtView = getCameraPreviewTextureView()
+//        videostreamPreviewTtView = findViewById<View>(R.id.livestream_preview_ttv) as TextureView
+//        videostreamPreviewTtView!!.setAlpha(0.0f)
         videostreamPreviewSf = findViewById<View>(R.id.livestream_preview_sf) as SurfaceView
         VideoFeeder.getInstance().transcodingDataRate = 3.0f
-        showToast("set rate to 3Mbps")
+//        showToast("set rate to 3Mbps")
 //        videostreamPreviewSf!!.isClickable = true
 //        videostreamPreviewSf!!.setOnClickListener {
 //            val rate: Float = VideoFeeder.getInstance().transcodingDataRate
@@ -239,6 +244,12 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //                showToast("set rate to 3Mbps")
 //            }
 //        }
+//        textureView = getCameraPreviewTextureView()
+//        val surface: SurfaceTexture? = videostreamPreviewTtView?.surfaceTexture
+//        if (surface != null) {
+//            textureView?.setSurfaceTexture(surface)
+//        }
+//        mImageView = findViewById(R.id.imageView)
         mResultView = findViewById(R.id.resultView)
         mResultView?.setVisibility(View.VISIBLE)
         updateUIVisibility()
@@ -393,9 +404,10 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
                     //For M300RTK, you need to actively request an I frame.
                     mCodecManager!!.resetKeyFrame()
                     setResultToToast("Adding YUV data listener in InitPreviewerTextureView")
-                    mCodecManager!!.enabledYuvData(true)
-                    mCodecManager!!.yuvDataCallback = this@MainActivity
+//                    mCodecManager!!.enabledYuvData(true)
+//                    mCodecManager!!.yuvDataCallback = this@MainActivity
                 }
+
             }
 
             override fun onSurfaceTextureSizeChanged(
@@ -416,7 +428,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
                 return false
             }
 
-            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {processimages()}
         }
     }
 
@@ -528,21 +540,32 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         Log.d(TAG, "YUV data received")
 //        setResultToToast("YUV data received")
 
+
         // Convert the YUV data ByteBuffer to a byte array
         Log.d(TAG, "Convert the YUV data ByteBuffer to a byte array")
         val yuvData = ByteArray(dataSize)
         yuvFrame?.get(yuvData)
+        val length = width * height
+        val u = ByteArray(width * height / 4)
+        val v = ByteArray(width * height / 4)
 
+        for (i in u.indices) {
+            u[i] = yuvData!![length + i]
+            v[i] = yuvData!![length + u.size + i]
+        }
+        for (i in u.indices) {
+            yuvData[length + 2 * i] = v[i]
+            yuvData[length + 2 * i + 1] = u[i]
+        }
         // Create a YuvImage object from the YUV data
         Log.d(TAG, "Create a YuvImage object from the YUV data")
         var yuvImage: YuvImage? = null
         try{
             yuvImage = YuvImage(yuvData, ImageFormat.NV21, width, height, null)
         }catch (e: Exception){Log.e(TAG, "Error creating a YuvImage object from the YUV data: $e")}
-
+        val outputStream = ByteArrayOutputStream()
         // Convert the YuvImage to a ByteArrayOutputStream
         Log.d(TAG, "Convert the YuvImage to a ByteArrayOutputStream")
-        val outputStream = ByteArrayOutputStream()
         if (yuvImage != null) {
             try {
                 yuvImage.compressToJpeg(Rect(0, 0, width, height), 100, outputStream)
@@ -555,10 +578,26 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         Log.d(TAG, "Create a Bitmap from the byte array")
         val bitmap = BitmapFactory.decodeByteArray(jpegByteArray, 0, jpegByteArray.size)
         // Bitmap for further processing or display
+//        val surface: SurfaceTexture? = videostreamPreviewTtView?.surfaceTexture
+//        if (surface != null) {
+//            textureView?.setSurfaceTexture(surface)
+//        }
+//        mImageView?.setImageDrawable(null)
+//        mImageView?.setImageBitmap(bitmap)
         Log.d(TAG, "Bitmap for further processing or display")
 //        module?.let { performObjectDetection(bitmap, it) }
         module?.let { performObjectDetection(bitmap, it) }
 //        performObjectDetection(bitmap, LiteModuleLoader.load(assetFilePath(this, "yolov5s.torchscript.ptl")))
+    }
+
+    fun processimages() {
+        val bitmap: Bitmap? = videostreamPreviewTtView?.getBitmap()
+        Log.d(TAG, "Bitmap from texture view")
+        module?.let {
+            if (bitmap != null) {
+                performObjectDetection(bitmap, it)
+            }
+        }
     }
 
     protected fun getCameraPreviewTextureView(): TextureView? {
@@ -603,7 +642,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         var outputTensor: Tensor = outputTuple[0].toTensor()
         var outputs = outputTensor.dataAsFloatArray
         Log.d(TAG, "Detected Objects: ${outputs.get(0)}")
-        setResultToToast("Detected Objects: ${outputs.get(0)}")
+
         val imgScaleX: Float = resizedrotatedBitmap.width.toFloat() / PrePostProcessor.mInputWidth
         val imgScaleY: Float = resizedrotatedBitmap.height.toFloat() / PrePostProcessor.mInputHeight
         Log.d(TAG, "Image scales: $imgScaleX and $imgScaleY")
@@ -627,8 +666,11 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
             0.toFloat()
         )
         if(results.size>0){
-            Log.d(TAG, "Returning ${results.size}")
-            runOnUiThread { applyToUiAnalyzeImageResult(AnalysisResult(results)) }
+            setResultToToast("Detected ${results.size} Objects")
+            Log.d(TAG, "Detected ${results.size} Objects")
+//            mResultView!!.setResults(results)
+//            mResultView!!.invalidate()
+//            runOnUiThread { applyToUiAnalyzeImageResult(AnalysisResult(results)) }
         }
 
 
