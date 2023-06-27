@@ -118,7 +118,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
             Log.d(TAG,"Buffered Reader created")
             val classes: MutableList<String> = ArrayList()
             File(fileName).forEachLine {classes.add(it)}
-            PrePostProcessor.mClasses = classes.toTypedArray()
+            mResultView!!.mClasses = classes.toTypedArray()
 //            classes.toArray(PrePostProcessor.mClasses)
             Log.i(TAG,"Classes loaded from :$fileName")
         }catch (  e:java.io.IOException)
@@ -184,9 +184,10 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //        setResultToToast("OnCreate")
 //        runOnUiThread { Toast.makeText(this, "OnCreate", Toast.LENGTH_SHORT).show() }
         super.onCreate(savedInstanceState)
-        loadModel()
+
         setContentView(R.layout.activity_main)
         initUi()
+        loadModel()
         if (MainActivity.isM300Product) {
             val ocuSyncLink: OcuSyncLink? =
                 VideoDecodingApplication.productInstance?.airLink?.ocuSyncLink
@@ -230,20 +231,20 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //        videostreamPreviewTtView = findViewById<View>(R.id.livestream_preview_ttv) as TextureView
 //        videostreamPreviewTtView!!.setAlpha(0.0f)
         videostreamPreviewSf = findViewById<View>(R.id.livestream_preview_sf) as SurfaceView
-        VideoFeeder.getInstance().transcodingDataRate = 3.0f
+//        VideoFeeder.getInstance().transcodingDataRate = 3.0f
 //        showToast("set rate to 3Mbps")
-//        videostreamPreviewSf!!.isClickable = true
-//        videostreamPreviewSf!!.setOnClickListener {
-//            val rate: Float = VideoFeeder.getInstance().transcodingDataRate
-//            showToast("current rate:" + rate + "Mbps")
-//            if (rate < 10) {
-//                VideoFeeder.getInstance().transcodingDataRate = 10.0f
-//                showToast("set rate to 10Mbps")
-//            } else {
-//                VideoFeeder.getInstance().transcodingDataRate = 3.0f
-//                showToast("set rate to 3Mbps")
-//            }
-//        }
+        videostreamPreviewSf!!.isClickable = true
+        videostreamPreviewSf!!.setOnClickListener {
+            val rate: Float = VideoFeeder.getInstance().transcodingDataRate
+            showToast("current rate:" + rate + "Mbps")
+            if (rate < 10) {
+                VideoFeeder.getInstance().transcodingDataRate = 10.0f
+                showToast("set rate to 10Mbps")
+            } else {
+                VideoFeeder.getInstance().transcodingDataRate = 3.0f
+                showToast("set rate to 3Mbps")
+            }
+        }
 //        textureView = getCameraPreviewTextureView()
 //        val surface: SurfaceTexture? = videostreamPreviewTtView?.surfaceTexture
 //        if (surface != null) {
@@ -407,6 +408,9 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //                    mCodecManager!!.enabledYuvData(true)
 //                    mCodecManager!!.yuvDataCallback = this@MainActivity
                 }
+//                val result = processimages()
+//                runOnUiThread { result?.let { AnalysisResult(it) }
+//                    ?.let { applyToUiAnalyzeImageResult(it) } }
 
             }
 
@@ -428,7 +432,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
                 return false
             }
 
-            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {processimages()}
+            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {val result = processimages()}
         }
     }
 
@@ -586,18 +590,23 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //        mImageView?.setImageBitmap(bitmap)
         Log.d(TAG, "Bitmap for further processing or display")
 //        module?.let { performObjectDetection(bitmap, it) }
-        module?.let { performObjectDetection(bitmap, it) }
+        module?.let { val res = performObjectDetection(bitmap, it) }
 //        performObjectDetection(bitmap, LiteModuleLoader.load(assetFilePath(this, "yolov5s.torchscript.ptl")))
     }
 
-    fun processimages() {
+    fun processimages(): java.util.ArrayList<Result>? {
         val bitmap: Bitmap? = videostreamPreviewTtView?.getBitmap()
         Log.d(TAG, "Bitmap from texture view")
         module?.let {
             if (bitmap != null) {
-                performObjectDetection(bitmap, it)
+                val res = performObjectDetection(bitmap, it)
+                mResultView!!.setResults(res)
+                mResultView!!.invalidate()
+                return res
             }
         }
+        val res: ArrayList<Result>? = null
+        return res
     }
 
     protected fun getCameraPreviewTextureView(): TextureView? {
@@ -611,9 +620,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         mResultView!!.invalidate()
     }
 
-    fun performObjectDetection(bitmap: Bitmap, model: Module) {
-//        setResultToToast("performObjectDetection")
-//        runOnUiThread { Toast.makeText(this, "performObjectDetection", Toast.LENGTH_SHORT).show() }
+    fun performObjectDetection(bitmap: Bitmap, model: Module):ArrayList<Result> {
         // Preprocess the input image
         Log.d(TAG, "Detecting Object")
         Log.d(TAG, "Create Scaled Bitmap")
@@ -672,6 +679,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //            mResultView!!.invalidate()
 //            runOnUiThread { applyToUiAnalyzeImageResult(AnalysisResult(results)) }
         }
+        return results
 
 
 //        Log.d(TAG, "Detecting Objects: $outputs")
@@ -682,16 +690,12 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     }
 
     private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
-//        setResultToToast("rotateBitmap")
-//        runOnUiThread { Toast.makeText(this, "rotateBitmap", Toast.LENGTH_SHORT).show() }
         val matrix = Matrix()
         matrix.postRotate(degrees)
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     private fun preprocessImage(bitmap: Bitmap): Tensor {
-//        setResultToToast("preprocessImage")
-//        runOnUiThread { Toast.makeText(this, "preprocessImage", Toast.LENGTH_SHORT).show() }
         // Resize and normalize the image
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap,
             INPUT_IMAGE_SIZE,

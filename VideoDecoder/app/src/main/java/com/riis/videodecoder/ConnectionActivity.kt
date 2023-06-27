@@ -65,8 +65,8 @@ class ConnectionActivity : AppCompatActivity() {
         try {
 //            Runtime.getRuntime().exec("logcat -c")
 //            Thread.sleep(200)
-            Runtime.getRuntime().exec("logcat -f ${logfile.absolutePath} *:S $TAG:D ${MainActivity.TAG}:D")
-            Runtime.getRuntime().exec("logcat -f" + logfileAll.absolutePath)
+            Runtime.getRuntime().exec("logcat -t 10000 -f ${logfile.absolutePath} *:S $TAG:D ${MainActivity.TAG}:D ${ResultView.TAG}:D ${PrePostProcessor.TAG}:D")
+            Runtime.getRuntime().exec("logcat -t 10000 -f" + logfileAll.absolutePath)
         } catch (e: Exception) {
         }
     }

@@ -9,13 +9,14 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
-import java.lang.String
 
 class ResultView : View {
     private var mPaintRectangle: Paint? = null
     private var mPaintText: Paint? = null
     private var mResults: ArrayList<Result>? = null
+    lateinit var mClasses: Array<String>
 
     constructor(context: Context?) : super(context) {}
     constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
@@ -41,15 +42,20 @@ class ResultView : View {
             )
             mPath.addRect(mRectF, Path.Direction.CW)
             mPaintText!!.color = Color.MAGENTA
+            Log.d(TAG, "Drawing rectangle for class: ${result.classIndex}")
             canvas.drawPath(mPath, mPaintText!!)
             mPaintText!!.color = Color.WHITE
             mPaintText!!.strokeWidth = 0f
             mPaintText!!.style = Paint.Style.FILL
             mPaintText!!.textSize = 32f
+            Log.d(TAG, "Drawing labels for class: ${result.classIndex}")
+//            val label = PrePostProcessor.mClasses?.get(result.classIndex)
+//            val classes = PrePostProcessor.getClasses()
+            val label = mClasses[result.classIndex]
             canvas.drawText(
                 String.format(
                     "%s %.2f",
-                    PrePostProcessor.mClasses?.get(result.classIndex),
+                    label,
                     result.score
                 ), (result.rect.left + TEXT_X).toFloat(), (result.rect.top + TEXT_Y).toFloat(),
                 mPaintText!!
@@ -62,6 +68,7 @@ class ResultView : View {
     }
 
     companion object {
+        const val TAG = "ResultView"
         private const val TEXT_X = 40
         private const val TEXT_Y = 35
         private const val TEXT_WIDTH = 260

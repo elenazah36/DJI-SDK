@@ -1,6 +1,7 @@
 package com.riis.videodecoder
 
 import android.graphics.Rect
+import android.util.Log
 import java.util.*
 
 // Copyright (c) 2020 Facebook, Inc. and its affiliates.
@@ -12,6 +13,7 @@ import java.util.*
 class PrePostProcessor {
     // for yolov5 model, no need to apply MEAN and STD
     companion object {
+        const val TAG = "PrePostProcessor"
         var NO_MEAN_RGB = floatArrayOf(0.0f, 0.0f, 0.0f)
         var NO_STD_RGB = floatArrayOf(1.0f, 1.0f, 1.0f)
 
@@ -145,11 +147,21 @@ class PrePostProcessor {
 
         val mInputWidth = 640F
         val mInputHeight = 640F
-        var mClasses: Array<String?>? = (null)
-            get() {
-                return mClasses
-            }
-
+//        var mClasses: Array<String?>? = (null)
+//            get() {
+//                Log.d(TAG, "mClassesGetter")
+//                return mClasses
+//            }
+//        fun getClasses(): Array<String?>? {
+//            if(mClasses != null){
+//                Log.d(TAG, "GettingmClasses: ")
+//                return mClasses
+//            }
+//             else{
+//                Log.d(TAG, "GettingmClasses: Class is null")
+//                return null
+//             }
+//        }
     }
 
 }
