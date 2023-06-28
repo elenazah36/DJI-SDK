@@ -231,20 +231,20 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 //        videostreamPreviewTtView = findViewById<View>(R.id.livestream_preview_ttv) as TextureView
 //        videostreamPreviewTtView!!.setAlpha(0.0f)
         videostreamPreviewSf = findViewById<View>(R.id.livestream_preview_sf) as SurfaceView
-//        VideoFeeder.getInstance().transcodingDataRate = 3.0f
-//        showToast("set rate to 3Mbps")
-        videostreamPreviewSf!!.isClickable = true
-        videostreamPreviewSf!!.setOnClickListener {
-            val rate: Float = VideoFeeder.getInstance().transcodingDataRate
-            showToast("current rate:" + rate + "Mbps")
-            if (rate < 10) {
-                VideoFeeder.getInstance().transcodingDataRate = 10.0f
-                showToast("set rate to 10Mbps")
-            } else {
-                VideoFeeder.getInstance().transcodingDataRate = 3.0f
-                showToast("set rate to 3Mbps")
-            }
-        }
+        VideoFeeder.getInstance().transcodingDataRate = 3.0f
+        showToast("set rate to 3Mbps")
+//        videostreamPreviewSf!!.isClickable = true
+//        videostreamPreviewSf!!.setOnClickListener {
+//            val rate: Float = VideoFeeder.getInstance().transcodingDataRate
+//            showToast("current rate:" + rate + "Mbps")
+//            if (rate < 10) {
+//                VideoFeeder.getInstance().transcodingDataRate = 10.0f
+//                showToast("set rate to 10Mbps")
+//            } else {
+//                VideoFeeder.getInstance().transcodingDataRate = 3.0f
+//                showToast("set rate to 3Mbps")
+//            }
+//        }
 //        textureView = getCameraPreviewTextureView()
 //        val surface: SurfaceTexture? = videostreamPreviewTtView?.surfaceTexture
 //        if (surface != null) {
@@ -673,7 +673,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
             0.toFloat()
         )
         if(results.size>0){
-            setResultToToast("Detected ${results.size} Objects")
+//            setResultToToast("Detected ${results.size} Objects")
             Log.d(TAG, "Detected ${results.size} Objects")
 //            mResultView!!.setResults(results)
 //            mResultView!!.invalidate()

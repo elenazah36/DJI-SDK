@@ -112,9 +112,9 @@ class PrePostProcessor {
                 ArrayList<Result>()
             for (i in 0 until mOutputRow) {
                 if (outputs[i * mOutputColumn + 4] > mThreshold) {
-                    val x = outputs[i * mOutputColumn]
+                    val x = outputs[i * mOutputColumn]*2
                     val y = outputs[i * mOutputColumn + 1]
-                    val w = outputs[i * mOutputColumn + 2]
+                    val w = outputs[i * mOutputColumn + 2]*2
                     val h = outputs[i * mOutputColumn + 3]
                     val left = imgScaleX * (x - w / 2)
                     val top = imgScaleY * (y - h / 2)
