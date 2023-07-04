@@ -22,10 +22,9 @@ class PrePostProcessor {
 //    var mInputHeight = 640
 
         // model output is of size 25200*(num_of_class+5)
-        private val mOutputRow =
-            25200 // as decided by the YOLOv5 model for input image of size 640*640
-        private val mOutputColumn = 85 // left, top, right, bottom, score and 80 class probability
-        private val mThreshold = 0.30f // score above which a detection is generated
+        private val mOutputRow = 25200 // as decided by the YOLOv5 model for input image of size 640*640
+        private val mOutputColumn = 6 // left, top, right, bottom, score and 80 class probability
+        private val mThreshold = 0.15f // score above which a detection is generated
         private val mNmsLimit = 15
         // The two methods nonMaxSuppression and IOU below are ported from https://github.com/hollance/YOLO-CoreML-MPSNNGraph/blob/master/Common/Helpers.swift
         /**

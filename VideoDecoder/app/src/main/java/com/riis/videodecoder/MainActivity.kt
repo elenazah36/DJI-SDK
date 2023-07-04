@@ -80,7 +80,9 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
 
     private fun loadModel(){
         Log.d(TAG,"Loading Model")
-        var fileName = assetFilePath(this, "yolov5s.torchscript.ptl")
+//        var fileName = assetFilePath(this, "yolov5s.torchscript.ptl")
+        var fileName = assetFilePath(this, "yolov5.torchscript.ptl")
+//        var fileName = assetFilePath(this, "best.pt")
 //        setResultToToast("the file path: $fileName")
         var file = File(fileName)
         var fileExists = file.exists()
@@ -96,8 +98,11 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
             Log.d(TAG,"Trying to load model.")
             module = LiteModuleLoader.load(fileName)
             Log.i(TAG,"Module loaded from :$fileName")
-            setResultToToast("Module loaded from :$fileName")
-        }catch (e: Exception){Log.e(TAG, "Error loading the model: $e")}
+//            setResultToToast("Module loaded from :$fileName")
+        }catch (e: Exception){
+            Log.e(TAG, "Error loading the model: $e")
+//            setResultToToast("Error loading the model: $e")
+        }
 
 
         Log.d(TAG,"Loading Classes")
@@ -106,7 +111,7 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         fileExists = file.exists()
         if(fileExists){
             Log.i(TAG,"$fileName exists.")
-//            setResultToToast("$fileName exists.")
+            setResultToToast("$fileName exists.")
         } else {
             Log.e(TAG,"$fileName does not exist.")
 //            setResultToToast("$fileName does not exist.")
@@ -114,16 +119,17 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
         try
         {
             Log.d(TAG,"Trying to load classes.")
-            val br = BufferedReader(InputStreamReader(assets.open("classes.txt")))
-            Log.d(TAG,"Buffered Reader created")
+//            val br = BufferedReader(InputStreamReader(fileName?.let { assets.open(it) }))
+//            Log.d(TAG,"Buffered Reader created")
             val classes: MutableList<String> = ArrayList()
             File(fileName).forEachLine {classes.add(it)}
             mResultView!!.mClasses = classes.toTypedArray()
 //            classes.toArray(PrePostProcessor.mClasses)
-            Log.i(TAG,"Classes loaded from :$fileName")
+            Log.i(TAG,"Classes ({${classes.size}}) loaded from :$fileName")
         }catch (  e:java.io.IOException)
         {
             Log.e(TAG, "Error reading classes: ", e)
+            setResultToToast("Error reading classes: $e")
             finish()
         }
     }
@@ -597,6 +603,10 @@ class MainActivity : Activity(), DJICodecManager.YuvDataCallback {
     fun processimages(): java.util.ArrayList<Result>? {
         val bitmap: Bitmap? = videostreamPreviewTtView?.getBitmap()
         Log.d(TAG, "Bitmap from texture view")
+        if(bitmap==null){
+            Log.d(TAG, "Bitmap from texture view is NULL")
+            setResultToToast("Bitmap from texture view is NULL")
+        }
         module?.let {
             if (bitmap != null) {
                 val res = performObjectDetection(bitmap, it)
